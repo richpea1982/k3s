@@ -12,22 +12,14 @@ spec:
     helm:
       values: |
         cloudflare:
-          # HA & Self-Healing: Scales to 2 instances across nodes
           replicaCount: 2
-
-          # Pure K8s separation: Points to the existing etcd secret
           tunnel_token_secret:
             name: cloudflare-tunnel-secret
             key: tunnelToken
-
-          ingress:
-            - service: http://traefik.kube-system.svc.cluster.local:80
   destination:
     server: https://kubernetes.default.svc
-    namespace: cloudflare 
+    namespace: cloudflare
   syncPolicy:
     automated:
       prune: true
       selfHeal: true
-    syncOptions:
-      - CreateNamespace=true
