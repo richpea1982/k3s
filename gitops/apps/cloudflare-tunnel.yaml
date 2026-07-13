@@ -18,7 +18,7 @@ spec:
           # Pure K8s separation: Points to the existing etcd secret
           tunnel_token_secret:
             name: cloudflare-tunnel-secret
-            key: token
+            key: tunnelToken
 
           ingress:
             - service: http://traefik.kube-system.svc.cluster.local:80
