@@ -8,7 +8,7 @@ spec:
   source:
     repoURL: https://crowdsecurity.github.io/helm-charts
     chart: crowdsec
-    targetRevision: "0.9.3"
+    targetRevision: "0.24.0"
     helm:
       values: |
         agent:
