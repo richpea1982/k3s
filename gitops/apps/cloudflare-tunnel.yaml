@@ -1,0 +1,33 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: cloudflare-tunnel
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: https://cloudflare.github.io/helm-charts
+    chart: cloudflare-tunnel
+    targetRevision: "0.1.1"
+    helm:
+      values: |
+        cloudflare:
+          # HA & Self-Healing: Scales to 2 instances across nodes
+          replicaCount: 2
+
+          # Pure K8s separation: Points to the existing etcd secret
+          tunnel_token_secret:
+            name: cloudflare-tunnel-secret
+            key: tunnel-token
+
+          ingress:
+            - service: http://traefik.kube-system.svc.cluster.local:80
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: cloudflare 
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
