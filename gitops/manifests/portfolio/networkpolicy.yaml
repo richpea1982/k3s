@@ -1,12 +1,12 @@
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
-  name: portfolio-test-isolation
-  namespace: portfolio-test
+  name: portfolio-isolation
+  namespace: portfolio
 spec:
   podSelector:
     matchLabels:
-      app: portfolio-test
+      app: portfolio
   policyTypes:
     - Ingress
     - Egress
