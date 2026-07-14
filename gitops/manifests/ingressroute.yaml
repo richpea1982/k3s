@@ -1,0 +1,14 @@
+apiVersion: traefik.io/v1alpha1
+kind: IngressRoute
+metadata:
+  name: portfolio-test
+  namespace: portfolio-test
+spec:
+  entryPoints:
+    - web
+  routes:
+    - match: Host(`richard.pearsalls.fr`)
+      kind: Rule
+      services:
+        - name: portfolio-test
+          port: 80

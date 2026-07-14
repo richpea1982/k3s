@@ -1,0 +1,46 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: portfolio-test
+  namespace: portfolio-test
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: portfolio-test
+  template:
+    metadata:
+      labels:
+        app: portfolio-test
+    spec:
+      containers:
+        - name: portfolio-test
+          image: ghcr.io/richpea1982/portfolio-test:latest
+          ports:
+            - containerPort: 80
+          resources:
+            requests:
+              cpu: 20m
+              memory: 32Mi
+            limits:
+              memory: 64Mi
+          readinessProbe:
+            httpGet:
+              path: /
+              port: 80
+          livenessProbe:
+            httpGet:
+              path: /
+              port: 80
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: portfolio-test
+  namespace: portfolio-test
+spec:
+  selector:
+    app: portfolio-test
+  ports:
+    - port: 80
+      targetPort: 80

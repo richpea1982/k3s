@@ -1,0 +1,42 @@
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: portfolio-test-isolation
+  namespace: portfolio-test
+spec:
+  podSelector:
+    matchLabels:
+      app: portfolio-test
+  policyTypes:
+    - Ingress
+    - Egress
+  ingress:
+    # Only Traefik itself may reach this pod
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: kube-system
+          podSelector:
+            matchLabels:
+              app.kubernetes.io/name: traefik
+      ports:
+        - protocol: TCP
+          port: 80
+    # Kubelet health probes come from the node IP, not a pod — allow the node subnet
+    - from:
+        - ipBlock:
+            cidr: 10.0.20.0/24
+      ports:
+        - protocol: TCP
+          port: 80
+  egress:
+    # A static file server needs nothing outbound except DNS
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: kube-system
+      ports:
+        - protocol: UDP
+          port: 53
+        - protocol: TCP
+          port: 53
