@@ -34,7 +34,7 @@ spec:
               config:
                 region: main
                 s3ForcePathStyle: true
-                s3Url: http://10.0.10.31:9000
+                s3Url: http://10.0.10.15:9000
                 insecureSkipTLSVerify: true
           # Kopia-based file-system backup — deliberate choice until a
           # Ceph RBD VolumeSnapshotClass exists (see README gotchas).
