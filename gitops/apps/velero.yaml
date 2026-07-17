@@ -39,10 +39,7 @@ spec:
           # Kopia-based file-system backup — deliberate choice until a
           # Ceph RBD VolumeSnapshotClass exists (see README gotchas).
           uploaderType: kopia
-          # No volumeSnapshotLocation block: not using CSI/native
-          # snapshots yet, so this section is intentionally omitted
-          # rather than pointed at a snapshot class that doesn't exist.
-
+          volumeSnapshotLocation: []
         # --- AWS plugin (S3-compatible — works against MinIO) ---
         initContainers:
           - name: velero-plugin-for-aws
