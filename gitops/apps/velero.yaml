@@ -1,0 +1,82 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: velero
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: https://vmware-tanzu.github.io/helm-charts
+    chart: velero
+    targetRevision: "12.1.0"
+    helm:
+      values: |
+        # --- Credentials ---
+        # The velero-minio-credentials Secret must already exist in the
+        # velero namespace BEFORE this Application first syncs (created
+        # manually via kubectl — see VELERO-README.md). ArgoCD will
+        # create the namespace (CreateNamespace=true below), but it will
+        # NOT create this secret — Velero pods will crash-loop until
+        # it's present.
+        credentials:
+          useSecret: true
+          existingSecret: velero-minio-credentials
+
+        # --- Backup storage location (MinIO on the NAS) ---
+        configuration:
+          backupStorageLocation:
+            - name: default
+              provider: aws
+              bucket: k3s-state
+              credential:
+                name: velero-minio-credentials
+                key: cloud
+              config:
+                region: main
+                s3ForcePathStyle: true
+                s3Url: http://10.0.10.15:9000
+                insecureSkipTLSVerify: true
+          # Kopia-based file-system backup — deliberate choice until a
+          # Ceph RBD VolumeSnapshotClass exists (see README gotchas).
+          uploaderType: kopia
+          volumeSnapshotLocation: []
+        # --- AWS plugin (S3-compatible — works against MinIO) ---
+        initContainers:
+          - name: velero-plugin-for-aws
+            image: velero/velero-plugin-for-aws:v1.14.2
+            volumeMounts:
+              - mountPath: /target
+                name: plugins
+
+        # --- Node-agent (Kopia) for PV backup, all nodes ---
+        deployNodeAgent: true
+        nodeAgent:
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              memory: 512Mi
+
+        resources:
+          requests:
+            cpu: 100m
+            memory: 128Mi
+          limits:
+            memory: 256Mi
+
+        # --- Schedule: daily 01:00, 7-day retention ---
+        schedules:
+          daily-backup:
+            schedule: "0 1 * * *"
+            template:
+              ttl: "168h0m0s"
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: velero
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
