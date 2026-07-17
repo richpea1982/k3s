@@ -27,7 +27,7 @@ spec:
           backupStorageLocation:
             - name: default
               provider: aws
-              bucket: k3s-velero-backups
+              bucket: k3s-state
               credential:
                 name: velero-minio-credentials
                 key: cloud
