@@ -1,0 +1,39 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: ceph-csi-rbd
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "-1"
+spec:
+  project: default
+  source:
+    repoURL: https://ceph.github.io/csi-charts
+    chart: ceph-csi-rbd
+    targetRevision: "3.16.2"
+    helm:
+      values: |
+        csiConfig:
+          - clusterID: "ede43719-c7a7-409d-9a4d-9a0d30d2e8ea"
+            monitors:
+              - "10.0.10.12:6789"
+              - "10.0.10.13:6789"
+              - "10.0.10.14:6789"
+
+        provisioner:
+          replicaCount: 2
+
+        secret:
+          create: false
+
+        storageClass:
+          create: false
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: ceph-csi-rbd
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
