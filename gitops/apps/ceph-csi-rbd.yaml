@@ -23,6 +23,9 @@ spec:
         provisioner:
           replicaCount: 2
 
+        topology:
+          enabled: false
+
         secret:
           create: false
 
