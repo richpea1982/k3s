@@ -15,4 +15,4 @@ parameters:
   csi.storage.k8s.io/node-stage-secret-namespace: ceph-csi-rbd
 reclaimPolicy: Retain
 allowVolumeExpansion: true
-volumeBindingMode: WaitForFirstConsumer
+volumeBindingMode: Immediate
