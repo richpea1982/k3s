@@ -7,13 +7,13 @@ This document covers the minimum operational steps required to deploy, verify, a
 1. Prerequisites — External Storage Setup
 
 Create MinIO Bucket and User
-1. Create Bucket: Create a dedicated bucket named k3s-velero-backups.
+1. Create Bucket: Create a dedicated bucket named k3s-state.
 2. Create User: Create a user named velero and generate a secret key.
-3. Attach Policy: Apply a read/write/delete policy restricted to k3s-velero-backups/*.
+3. Attach Policy: Apply a read/write/delete policy restricted to k3s-state/*.
 
 MinIO client commands
-mc alias set homelab-minio http://10.0.10.31:9000 <ROOT_USER> <ROOT_PASSWORD>
-mc mb homelab-minio/k3s-velero-backups
+mc alias set homelab-minio http://10.0.10.15:9000 <ROOT_USER> <ROOT_PASSWORD>
+mc mb homelab-minio/k3s-state
 mc admin user add homelab-minio velero <PLACEHOLDER_VELERO_SECRET>
 mc admin policy create homelab-minio velero-rw ./velero-policy.json
 mc admin policy attach homelab-minio velero-rw --user velero
@@ -45,6 +45,7 @@ Velero is deployed as an ArgoCD Application (gitops/apps/velero.yaml). Trigger t
 
 3. Essential Verification Commands
 
+
 Confirm Pod Health
 kubectl -n velero get pods
 
@@ -58,7 +59,7 @@ velero backup describe test-backup-<timestamp>
 (Confirm the status is Completed, not PartiallyFailed.)
 
 Verify S3 Upload
-mc ls homelab-minio/k3s-velero-backups/backups/
+mc ls homelab-minio/k3s-state/backups/
 
 Test Restore Functionality
 velero restore create --from-backup test-backup-<timestamp>
