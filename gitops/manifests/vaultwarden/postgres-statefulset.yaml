@@ -1,0 +1,79 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: postgres
+  namespace: vaultwarden
+spec:
+  clusterIP: None
+  selector:
+    app: postgres
+  ports:
+    - port: 5432
+      targetPort: 5432
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: postgres
+  namespace: vaultwarden
+spec:
+  serviceName: postgres
+  replicas: 1
+  selector:
+    matchLabels:
+      app: postgres
+  template:
+    metadata:
+      labels:
+        app: postgres
+    spec:
+      containers:
+        - name: postgres
+          image: postgres:16-alpine
+          ports:
+            - containerPort: 5432
+          envFrom:
+            - secretRef:
+                # Provides POSTGRES_USER / POSTGRES_PASSWORD / POSTGRES_DB.
+                # Created manually — see VAULTWARDEN-README.md. Not in Git.
+                name: vaultwarden-secrets
+          volumeMounts:
+            - name: postgres-data
+              mountPath: /var/lib/postgresql/data
+              subPath: pgdata # avoids "lost+found" clutter issues on some CSI drivers
+          readinessProbe:
+            exec:
+              command: ["pg_isready", "-U", "$(POSTGRES_USER)"]
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          livenessProbe:
+            exec:
+              command: ["pg_isready", "-U", "$(POSTGRES_USER)"]
+            initialDelaySeconds: 15
+            periodSeconds: 20
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              memory: 512Mi
+  volumeClaimTemplates:
+    - metadata:
+        name: postgres-data
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        storageClassName: ceph-rbd
+        resources:
+          requests:
+            storage: 2Gi
+
+# --- Backup note (deliberate gap, not an oversight) ---
+# No Velero fs-backup annotation is applied here on purpose. Velero's
+# Kopia node-agent backs up files as they sit on disk, not a
+# WAL-consistent snapshot — for a live Postgres data directory that risks
+# a torn, non-restorable backup (same class of risk as running Postgres
+# over NFS). This is deliberately deferred until either:
+#   a) a Ceph CSI VolumeSnapshotClass exists (true point-in-time RBD
+#      snapshot, safe for a live DB), or
+#   b) a pg_dump CronJob is added as a logical-backup fallback.
+# See open TODOs.
