@@ -2,10 +2,11 @@
 # migration lands, Tailscale in the meantime. Deliberately NOT routed
 # through the cloudflared tunnel; see VAULTWARDEN-README.md.
 #
-# NOTE: vaultwarden.local.lan requires Unbound split-horizon DNS on
-# OPNsense, which is still planned/not yet built. Until then, resolve it
-# manually (e.g. an /etc/hosts entry on your admin machine pointing at
-# the Traefik service's node IP) or via `kubectl port-forward`.
+# vault.pearsalls.fr is a real subdomain of a domain we control (needed
+# for Let's Encrypt DNS-01 — see TRAEFIK-TLS-README.md) but has NO public
+# A/CNAME record and is never reachable from the internet. Resolve it
+# manually via an /etc/hosts entry on your admin machine pointing at a
+# K3s node IP (e.g. 10.0.20.21), or `kubectl port-forward`.
 apiVersion: traefik.io/v1alpha1
 kind: IngressRoute
 metadata:
@@ -13,10 +14,12 @@ metadata:
   namespace: vaultwarden
 spec:
   entryPoints:
-    - web
+    - websecure
   routes:
-    - match: Host(`vaultwarden.local.lan`)
+    - match: Host(`vault.pearsalls.fr`)
       kind: Rule
       services:
         - name: vaultwarden
           port: 80
+  tls:
+    certResolver: cloudflare

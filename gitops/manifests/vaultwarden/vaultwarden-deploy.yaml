@@ -27,6 +27,23 @@ spec:
       labels:
         app: vaultwarden
     spec:
+      initContainers:
+        - name: wait-for-postgres
+          image: busybox:1.36
+          command:
+            - sh
+            - -c
+            - |
+              until nc -z -w2 postgres 5432; do
+                echo "waiting for postgres..."
+                sleep 2
+              done
+          resources:
+            requests:
+              cpu: 10m
+              memory: 16Mi
+            limits:
+              memory: 32Mi
       containers:
         - name: vaultwarden
           image: vaultwarden/server:1.32.7-alpine
@@ -34,7 +51,7 @@ spec:
             - containerPort: 80
           env:
             - name: DOMAIN
-              value: "https://vaultwarden.local.lan"
+              value: "https://vault.pearsalls.fr"
             - name: SIGNUPS_ALLOWED
               value: "true" # IMPORTANT: set to "false" and re-sync once your account exists — see VAULTWARDEN-README.md step 3
             - name: WEBSOCKET_ENABLED
