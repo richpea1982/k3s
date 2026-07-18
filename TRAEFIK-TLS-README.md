@@ -85,6 +85,14 @@ Confirm acme.json persisted (survives pod restarts)
   log search tools. Not a security hole — nothing is reachable without
   Tailscale/WireGuard — but expect automated recon scanners to notice the
   hostname exists.
+- Ceph RBD Doesn't Honor fsGroup: fresh RBD PVCs come back `root:root`
+  owned regardless of the pod's `fsGroup` — Traefik's non-root container
+  (UID 65532) can't write `acme.json` without the `volume-permissions`
+  init container fixing ownership first. Symptom: `permission denied`
+  opening `/data/acme.json`, and the file may not even exist yet.
+  Diagnostic: `kubectl get csidriver rbd.csi.ceph.com -o yaml` — check
+  `fsGroupPolicy`; if it's not `File`, this will bite any future
+  RBD-backed workload that runs as non-root, not just Traefik.
 - One Resolver, Many Hosts: `certResolver: cloudflare` is reusable as-is
   for every future internal `*.pearsalls.fr` app (Grafana, Dozzle,
   BenToPDF) — just reference it in each new IngressRoute's `tls` block,

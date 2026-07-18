@@ -35,7 +35,7 @@ spec:
           # do this before the line above ships for real. Staging certs
           # aren't browser-trusted but validate the whole DNS-01 flow
           # without touching your production rate limit (50 certs/week/domain).
-          - "--certificatesresolvers.cloudflare.acme.caserver=https://acme-staging-v02.api.letsencrypt.org/directory"
+          # - "--certificatesresolvers.cloudflare.acme.caserver=https://acme-staging-v02.api.letsencrypt.org/directory"
 
         envFrom:
           - secretRef:
@@ -52,6 +52,31 @@ spec:
           storageClass: ceph-rbd
           size: 1Gi
           path: /data
+
+        # Ceph RBD's CSI driver doesn't reliably honor the pod's fsGroup
+        # (a common limitation, not unique to this setup) — the fresh PVC
+        # comes back root:root, and Traefik's non-root container (UID
+        # 65532) can't write acme.json to it. This is the Traefik Helm
+        # chart's own documented workaround for exactly this class of
+        # problem (see the chart's values.yaml comments for
+        # deployment.initContainers).
+        deployment:
+          initContainers:
+            - name: volume-permissions
+              image: busybox:1.36
+              command:
+                - sh
+                - -c
+                - |
+                  touch /data/acme.json
+                  chmod 600 /data/acme.json
+                  chown -R 65532:65532 /data
+              volumeMounts:
+                - name: data
+                  mountPath: /data
+              securityContext:
+                runAsNonRoot: false
+                runAsUser: 0
   destination:
     server: https://kubernetes.default.svc
     namespace: kube-system
