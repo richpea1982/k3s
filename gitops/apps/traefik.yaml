@@ -16,6 +16,42 @@ spec:
             enabled: true
           kubernetesIngress:
             enabled: true
+
+        # --- ACME / Let's Encrypt via Cloudflare DNS-01 ---
+        # Used for internal-only *.pearsalls.fr hosts (e.g. vault.pearsalls.fr)
+        # that never get a Cloudflare Tunnel entry and are never publicly
+        # reachable. DNS-01 only requires proving control of the DNS zone —
+        # it does NOT require the hostname to resolve to anything real or
+        # be reachable from the internet. No A/CNAME record is created for
+        # these hosts; resolution happens purely via local /etc/hosts
+        # overrides on admin devices, same as the current .local.lan scheme.
+        additionalArguments:
+          - "--certificatesresolvers.cloudflare.acme.email=rpearsall1982@gmail.com"
+          - "--certificatesresolvers.cloudflare.acme.storage=/data/acme.json"
+          - "--certificatesresolvers.cloudflare.acme.dnschallenge=true"
+          - "--certificatesresolvers.cloudflare.acme.dnschallenge.provider=cloudflare"
+          - "--certificatesresolvers.cloudflare.acme.dnschallenge.resolvers=1.1.1.1:53,8.8.8.8:53"
+          # UNCOMMENT to dry-run against Let's Encrypt's staging CA first —
+          # do this before the line above ships for real. Staging certs
+          # aren't browser-trusted but validate the whole DNS-01 flow
+          # without touching your production rate limit (50 certs/week/domain).
+          - "--certificatesresolvers.cloudflare.acme.caserver=https://acme-staging-v02.api.letsencrypt.org/directory"
+
+        envFrom:
+          - secretRef:
+              # Provides CF_DNS_API_TOKEN — a Cloudflare API token scoped to
+              # Zone:DNS:Edit on the pearsalls.fr zone ONLY (not the Tunnel
+              # token, not a Global API Key). Created manually, not in Git —
+              # see TRAEFIK-TLS-README.md.
+              name: traefik-cloudflare-dns-token
+
+        # acme.json must survive pod restarts, or every restart re-requests
+        # every cert and risks the Let's Encrypt rate limit.
+        persistence:
+          enabled: true
+          storageClass: ceph-rbd
+          size: 1Gi
+          path: /data
   destination:
     server: https://kubernetes.default.svc
     namespace: kube-system
