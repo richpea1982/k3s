@@ -17,6 +17,14 @@ spec:
           kubernetesIngress:
             enabled: true
 
+        # RWO Ceph RBD volume (acme.json) can only attach to one pod at a
+        # time. The chart's default RollingUpdate strategy tries to bring
+        # the new pod up before releasing the old one's volume attachment
+        # — guaranteed deadlock with a single-replica RWO-backed workload.
+        # Same fix as vaultwarden's Deployment, same underlying reason.
+        updateStrategy:
+          type: Recreate
+
         # --- ACME / Let's Encrypt via Cloudflare DNS-01 ---
         # Used for internal-only *.pearsalls.fr hosts (e.g. vault.pearsalls.fr)
         # that never get a Cloudflare Tunnel entry and are never publicly
