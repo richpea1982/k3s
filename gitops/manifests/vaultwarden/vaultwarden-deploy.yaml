@@ -46,7 +46,7 @@ spec:
               memory: 32Mi
       containers:
         - name: vaultwarden
-          image: vaultwarden/server:1.32.7-alpine
+          image: vaultwarden/server:1.36.0-alpine
           ports:
             - containerPort: 80
           env:
