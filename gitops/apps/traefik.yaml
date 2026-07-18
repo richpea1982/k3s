@@ -35,7 +35,7 @@ spec:
           # do this before the line above ships for real. Staging certs
           # aren't browser-trusted but validate the whole DNS-01 flow
           # without touching your production rate limit (50 certs/week/domain).
-          # - "--certificatesresolvers.cloudflare.acme.caserver=https://acme-staging-v02.api.letsencrypt.org/directory"
+          - "--certificatesresolvers.cloudflare.acme.caserver=https://acme-staging-v02.api.letsencrypt.org/directory"
 
         envFrom:
           - secretRef:
