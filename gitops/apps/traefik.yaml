@@ -24,6 +24,7 @@ spec:
         # Same fix as vaultwarden's Deployment, same underlying reason.
         updateStrategy:
           type: Recreate
+          rollingUpdate: null
 
         # --- ACME / Let's Encrypt via Cloudflare DNS-01 ---
         # Used for internal-only *.pearsalls.fr hosts (e.g. vault.pearsalls.fr)
@@ -39,10 +40,9 @@ spec:
           - "--certificatesresolvers.cloudflare.acme.dnschallenge=true"
           - "--certificatesresolvers.cloudflare.acme.dnschallenge.provider=cloudflare"
           - "--certificatesresolvers.cloudflare.acme.dnschallenge.resolvers=1.1.1.1:53,8.8.8.8:53"
-          # UNCOMMENT to dry-run against Let's Encrypt's staging CA first —
-          # do this before the line above ships for real. Staging certs
-          # aren't browser-trusted but validate the whole DNS-01 flow
-          # without touching your production rate limit (50 certs/week/domain).
+          # Confirmed working end-to-end against staging (2026-07-18) — cert
+          # for vault.pearsalls.fr issued successfully. Reverting to
+          # production (default, no caserver override needed below).
           # - "--certificatesresolvers.cloudflare.acme.caserver=https://acme-staging-v02.api.letsencrypt.org/directory"
 
         envFrom:
