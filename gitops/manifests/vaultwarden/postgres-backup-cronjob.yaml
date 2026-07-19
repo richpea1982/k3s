@@ -48,12 +48,33 @@ spec:
                 - |
                   set -e
                   STAMP=$(date +%Y%m%d-%H%M%S)
-                  FILE="/backup/vaultwarden-${STAMP}.sql.gz"
-                  echo "Dumping to ${FILE}..."
+                  RAW="/backup/vaultwarden-${STAMP}.sql"
+                  FILE="${RAW}.gz"
+
+                  echo "Dumping to ${RAW}..."
+                  # Deliberately NOT piped into gzip directly — in a shell
+                  # pipeline, `set -e` only sees the LAST command's exit
+                  # code. A failed pg_dump piped into a successful gzip
+                  # would report success on an empty/broken backup. Writing
+                  # to a plain file first means pg_dump's own exit code is
+                  # what set -e actually checks.
                   PGPASSWORD="${POSTGRES_PASSWORD}" pg_dump \
                     -h postgres -U "${POSTGRES_USER}" -d "${POSTGRES_DB}" \
-                    -F p | gzip > "${FILE}"
+                    -F p > "${RAW}"
+
+                  # Sanity check: a real dump of this vault is tens of KB
+                  # at minimum. Catches a "succeeded but suspiciously
+                  # empty" dump that an exit-code check alone might miss.
+                  SIZE=$(wc -c < "${RAW}")
+                  if [ "${SIZE}" -lt 1024 ]; then
+                    echo "ERROR: dump is suspiciously small (${SIZE} bytes) — refusing to keep it"
+                    rm -f "${RAW}"
+                    exit 1
+                  fi
+
+                  gzip "${RAW}"
                   echo "Dump complete: $(ls -lh ${FILE})"
+
                   echo "Pruning dumps older than 7 days..."
                   find /backup -name "vaultwarden-*.sql.gz" -mtime +7 -print -delete
               volumeMounts:
