@@ -70,3 +70,15 @@ spec:
       ports:
         - protocol: TCP
           port: 5432
+    # Nightly pg_dump CronJob. Deliberately a separate rule with its own
+    # label rather than reusing "app: vaultwarden" — that label also
+    # matches the vaultwarden Service's selector, which a recurring job
+    # (unlike the one-off migration pods) shouldn't ever risk colliding
+    # with.
+    - from:
+        - podSelector:
+            matchLabels:
+              job: postgres-backup
+      ports:
+        - protocol: TCP
+          port: 5432

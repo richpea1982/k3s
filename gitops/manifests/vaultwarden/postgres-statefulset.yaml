@@ -67,13 +67,12 @@ spec:
           requests:
             storage: 2Gi
 
-# --- Backup note (deliberate gap, not an oversight) ---
-# No Velero fs-backup annotation is applied here on purpose. Velero's
-# Kopia node-agent backs up files as they sit on disk, not a
-# WAL-consistent snapshot — for a live Postgres data directory that risks
-# a torn, non-restorable backup (same class of risk as running Postgres
-# over NFS). This is deliberately deferred until either:
-#   a) a Ceph CSI VolumeSnapshotClass exists (true point-in-time RBD
-#      snapshot, safe for a live DB), or
-#   b) a pg_dump CronJob is added as a logical-backup fallback.
-# See open TODOs.
+# --- Backup note ---
+# Protected by a nightly pg_dump CronJob (postgres-backup-cronjob.yaml),
+# NOT by Velero's Kopia fs-backup directly against this volume — Kopia
+# backs up files as they sit on disk, not a WAL-consistent snapshot, so a
+# live Postgres data directory backed up that way risks a torn,
+# non-restorable copy. The pg_dump output itself is what Velero actually
+# protects (it's just a file on a different PVC). True block-level Ceph
+# CSI snapshotting remains a planned follow-up for faster recovery point,
+# not yet built. See VAULTWARDEN-README.md sections 5-6.

@@ -90,9 +90,50 @@ Admin Panel (uses ADMIN_TOKEN from the secret)
   manual host entry pointing at a K3s node IP, or use
   `kubectl -n vaultwarden port-forward svc/vaultwarden 8080:80` for
   interim access.
-- No Backups Yet (Deliberate): see the note at the bottom of
-  `postgres-statefulset.yaml`. Velero's Kopia fs-backup is not
-  file-consistency-safe for a live Postgres data directory. Don't assume
-  this data is protected until either a Ceph CSI VolumeSnapshotClass or a
-  `pg_dump` CronJob exists — track this the same way etcd-snapshot-to-S3
-  was tracked before it was actually verified working.
+- Backup Strategy: a nightly `pg_dump` CronJob runs at 00:30, writing a
+  gzipped SQL dump to a dedicated PVC (`postgres-backup`), 7-day local
+  retention. Velero's existing daily backup (01:00) sweeps that PVC up
+  automatically — no Velero config changes needed. This is a logical
+  (SQL-statement) backup, transactionally consistent by construction, not
+  a filesystem-level copy — safe for a live database in a way Kopia's
+  fs-backup alone would not have been. Ceph CSI snapshotting (faster
+  recovery point, true block-level) remains a planned follow-up, not yet
+  built.
+
+Confirm a dump actually ran:
+
+    kubectl -n vaultwarden get cronjob postgres-backup
+    kubectl -n vaultwarden get jobs -l job-name=postgres-backup
+    kubectl -n vaultwarden exec -it postgres-0 -- sh   # or a throwaway pod
+    # then inside: ls -lh /backup   (if mounted) or check via the CronJob's pod logs
+
+Trigger one manually rather than waiting for 00:30:
+
+    kubectl -n vaultwarden create job --from=cronjob/postgres-backup postgres-backup-manual
+
+---
+
+6. Restoring From a Dump
+
+Same scratch-database-then-rename pattern used for the original LXC
+migration — verify before touching anything live, never restore directly
+into the production database:
+
+    # 1. Copy the dump out of the backup PVC (via a throwaway pod, or
+    #    from wherever Velero has archived it in MinIO if restoring after
+    #    a full PVC loss)
+
+    # 2. Create a scratch database
+    kubectl -n vaultwarden exec -it postgres-0 -- psql -U vaultwarden -d vaultwarden \
+      -c "CREATE DATABASE vaultwarden_restore_test OWNER vaultwarden;"
+
+    # 3. Load the dump into it
+    gunzip -c vaultwarden-<timestamp>.sql.gz | \
+      kubectl -n vaultwarden exec -i postgres-0 -- psql -U vaultwarden -d vaultwarden_restore_test
+
+    # 4. Verify with a throwaway Vaultwarden pod pointed at the restored
+    #    scratch DB (same pattern as the migration verification step),
+    #    confirm real vault data is present and readable
+
+    # 5. Only once confirmed: cut over via the same rename procedure used
+    #    during the original migration (lock connections, rename, restart)
