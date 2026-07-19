@@ -47,6 +47,25 @@ spec:
                 - -c
                 - |
                   set -e
+
+                  # pg_dump has no retry logic of its own — unlike
+                  # Vaultwarden's app, it tries once and gives up. Give it
+                  # the same patience Vaultwarden's initContainer already
+                  # uses, to absorb any transient connectivity blip rather
+                  # than fail outright on the first attempt.
+                  echo "Waiting for postgres to accept connections..."
+                  i=0
+                  until pg_isready -h postgres -p 5432 -U "${POSTGRES_USER}" >/dev/null 2>&1; do
+                    i=$((i+1))
+                    if [ "$i" -ge 30 ]; then
+                      echo "ERROR: postgres never became ready after 60s"
+                      exit 1
+                    fi
+                    echo "  not yet ($i)..."
+                    sleep 2
+                  done
+                  echo "postgres is ready."
+
                   STAMP=$(date +%Y%m%d-%H%M%S)
                   RAW="/backup/vaultwarden-${STAMP}.sql"
                   FILE="${RAW}.gz"
