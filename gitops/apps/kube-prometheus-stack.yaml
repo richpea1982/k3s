@@ -1,0 +1,108 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: kube-prometheus-stack
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: https://prometheus-community.github.io/helm-charts
+    chart: kube-prometheus-stack
+    # Verify against `helm search repo prometheus-community/kube-prometheus-stack`
+    # before first sync — this chart ships frequent releases.
+    targetRevision: "87.16.1"
+    helm:
+      values: |
+        prometheus:
+          prometheusSpec:
+            retention: 15d
+            resources:
+              requests: { cpu: 200m, memory: 512Mi }
+              limits: { memory: 1Gi }
+            # Ceph RBD, deliberately: if Prometheus data lived on local-path
+            # and the node it was scheduled on is the one that dies, you lose
+            # the exact history needed to confirm the DR pipeline worked.
+            storageSpec:
+              volumeClaimTemplate:
+                spec:
+                  storageClassName: ceph-rbd
+                  accessModes: ["ReadWriteOnce"]
+                  resources:
+                    requests: { storage: 20Gi }
+            # Node-down detection depends on discovering kube-state-metrics /
+            # node-exporter cluster-wide, not just chart-labelled targets —
+            # same reasoning as the ServiceMonitor note in project memory.
+            serviceMonitorSelectorNilUsesHelmValues: false
+            podMonitorSelectorNilUsesHelmValues: false
+            ruleSelectorNilUsesHelmValues: false
+
+          # --- The alert that drives the whole DR pipeline ---
+          additionalPrometheusRulesMap:
+            k3s-node-health:
+              groups:
+                - name: k3s-node-health
+                  rules:
+                    - alert: K3sNodeDown
+                      expr: kube_node_status_condition{condition="Ready", status="true"} == 0
+                      for: 5m
+                      labels:
+                        severity: critical
+                      annotations:
+                        summary: "K3s node {{ $labels.node }} has been NotReady for 5+ minutes"
+                        description: "Fires the alert-router on pve1: Terraform replace + Ansible rejoin for this node."
+
+        alertmanager:
+          alertmanagerSpec:
+            resources:
+              requests: { cpu: 50m, memory: 128Mi }
+              limits: { memory: 256Mi }
+            storage:
+              volumeClaimTemplate:
+                spec:
+                  storageClassName: ceph-rbd
+                  accessModes: ["ReadWriteOnce"]
+                  resources:
+                    requests: { storage: 2Gi }
+          config:
+            route:
+              receiver: "null"
+              routes:
+                - matchers:
+                    - alertname = "K3sNodeDown"
+                  receiver: alert-router
+                  repeat_interval: 15m
+            receivers:
+              - name: "null"
+              - name: alert-router
+                webhook_configs:
+                  # pve1 — deliberately OUTSIDE the K3s cluster this remediates.
+                  # Requires a new OPNsense rule: VLAN20 -> 10.0.10.17:8080/tcp.
+                  # (Current policy only opens VLAN20->VLAN10 for MinIO on 9000/9001.)
+                  - url: "http://10.0.10.17:8080/webhook/alertmanager"
+                    send_resolved: true
+
+        grafana:
+          resources:
+            requests: { cpu: 50m, memory: 128Mi }
+            limits: { memory: 256Mi }
+          persistence:
+            enabled: true
+            storageClassName: ceph-rbd
+            size: 5Gi
+          # Traefik IngressRoute for grafana.local.lan (WireGuard-only, per
+          # the existing K3s namespace map) is a separate follow-up — not
+          # needed to validate the DR pipeline itself.
+
+        kubeStateMetrics:
+          enabled: true
+        nodeExporter:
+          enabled: true
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: monitoring
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
