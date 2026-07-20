@@ -13,6 +13,8 @@ spec:
     targetRevision: "87.16.1"
     helm:
       values: |
+        crds:
+          enabled: false
         prometheus:
           prometheusSpec:
             retention: 15d
