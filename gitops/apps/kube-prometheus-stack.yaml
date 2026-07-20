@@ -12,9 +12,8 @@ spec:
     # before first sync — this chart ships frequent releases.
     targetRevision: "87.16.1"
     helm:
+      skipCrds: true
       values: |
-        crds:
-          enabled: false
         prometheus:
           prometheusSpec:
             retention: 15d
