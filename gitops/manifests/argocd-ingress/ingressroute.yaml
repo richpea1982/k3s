@@ -1,0 +1,20 @@
+apiVersion: traefik.io/v1alpha1
+kind: IngressRoute
+metadata:
+  name: argocd-server
+  namespace: argocd
+spec:
+  entryPoints:
+    - web
+  routes:
+    - match: Host(`argocd.local.lan`)
+      kind: Rule
+      middlewares:
+        - name: argocd-admin-only
+      services:
+        # Port 80 requires argocd-server running with server.insecure: true
+        # (see the configmap patch in the setup notes) — otherwise this
+        # backend is HTTPS with a self-signed cert and needs a
+        # ServersTransport with insecureSkipVerify instead.
+        - name: argocd-server
+          port: 80
