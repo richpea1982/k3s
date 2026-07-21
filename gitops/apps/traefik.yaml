@@ -11,6 +11,17 @@ spec:
     targetRevision: "30.0.2"
     helm:
       values: |
+        # Preserve real client source IPs. Default (Cluster) traffic policy
+        # SNATs every inbound connection to the receiving node's own IP
+        # before it reaches any pod — confirmed the hard way via the
+        # argocd-admin-only IPAllowList middleware seeing 10.0.20.21
+        # (a node IP) instead of any real client, for every single request.
+        # Local skips that SNAT hop. Tradeoff: a node not currently running
+        # a Traefik pod silently drops traffic instead of forwarding it —
+        # a non-issue at a single replica, worth remembering if Traefik is
+        # ever scaled across nodes.
+        service:
+          externalTrafficPolicy: Local
         providers:
           kubernetesCRD:
             enabled: true
@@ -30,9 +41,6 @@ spec:
         # the new pod up before releasing the old one's volume attachment
         # — guaranteed deadlock with a single-replica RWO-backed workload.
         # Same fix as vaultwarden's Deployment, same underlying reason.
-service:
-  externalTrafficPolicy: Local
-
         updateStrategy:
           type: Recreate
           rollingUpdate: null
