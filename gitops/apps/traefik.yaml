@@ -21,7 +21,8 @@ spec:
         # a non-issue at a single replica, worth remembering if Traefik is
         # ever scaled across nodes.
         service:
-          externalTrafficPolicy: Local
+          spec:
+            externalTrafficPolicy: Local
         providers:
           kubernetesCRD:
             enabled: true
