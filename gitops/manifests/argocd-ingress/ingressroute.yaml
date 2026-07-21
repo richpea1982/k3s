@@ -5,16 +5,16 @@ metadata:
   namespace: argocd
 spec:
   entryPoints:
-    - web
+    - websecure
   routes:
     - match: Host(`argocd.pearsalls.fr`)
       kind: Rule
       middlewares:
         - name: argocd-admin-only
       services:
-        # Port 80 requires argocd-server running with server.insecure: true
-        # (see the configmap patch in the setup notes) — otherwise this
-        # backend is HTTPS with a self-signed cert and needs a
-        # ServersTransport with insecureSkipVerify instead.
+        # Port 80 — argocd-server is running with server.insecure: true,
+        # same as vaultwarden's backend; Traefik terminates TLS.
         - name: argocd-server
           port: 80
+  tls:
+    certResolver: cloudflare
