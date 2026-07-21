@@ -9,7 +9,7 @@ spec:
       # VLAN10 (management) only — same scope as the "MGMT -> all VLANs"
       # OPNsense rule. Not opened to VLAN20/30 at all: nothing in the
       # cluster itself needs to reach the ArgoCD UI, only you do.
-      - 10.0.10.0/24
+      - 10.0.20.21/24
       # Tailscale CGNAT range — remove once WireGuard migration lands and
       # replace with whatever subnet the WireGuard client pool ends up on.
       - 100.64.0.0/10
