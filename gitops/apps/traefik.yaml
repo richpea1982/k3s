@@ -16,7 +16,15 @@ spec:
             enabled: true
           kubernetesIngress:
             enabled: true
-
+        # Per-request access logs — needed to actually see what Traefik
+        # decides (matched router, middleware verdicts, client IP, status
+        # code) instead of only controller/startup noise. Off by default.
+        logs:
+          access:
+            enabled: true
+            fields:
+              headers:
+                defaultMode: keep
         # RWO Ceph RBD volume (acme.json) can only attach to one pod at a
         # time. The chart's default RollingUpdate strategy tries to bring
         # the new pod up before releasing the old one's volume attachment
@@ -25,7 +33,6 @@ spec:
         updateStrategy:
           type: Recreate
           rollingUpdate: null
-
         # --- ACME / Let's Encrypt via Cloudflare DNS-01 ---
         # Used for internal-only *.pearsalls.fr hosts (e.g. vault.pearsalls.fr)
         # that never get a Cloudflare Tunnel entry and are never publicly
@@ -44,7 +51,6 @@ spec:
           # for vault.pearsalls.fr issued successfully. Reverting to
           # production (default, no caserver override needed below).
           # - "--certificatesresolvers.cloudflare.acme.caserver=https://acme-staging-v02.api.letsencrypt.org/directory"
-
         envFrom:
           - secretRef:
               # Provides CF_DNS_API_TOKEN — a Cloudflare API token scoped to
@@ -52,7 +58,6 @@ spec:
               # token, not a Global API Key). Created manually, not in Git —
               # see TRAEFIK-TLS-README.md.
               name: traefik-cloudflare-dns-token
-
         # acme.json must survive pod restarts, or every restart re-requests
         # every cert and risks the Let's Encrypt rate limit.
         persistence:
@@ -60,7 +65,6 @@ spec:
           storageClass: ceph-rbd
           size: 1Gi
           path: /data
-
         # Ceph RBD's CSI driver doesn't reliably honor the pod's fsGroup
         # (a common limitation, not unique to this setup) — the fresh PVC
         # comes back root:root, and Traefik's non-root container (UID
