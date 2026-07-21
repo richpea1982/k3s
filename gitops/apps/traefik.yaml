@@ -30,6 +30,9 @@ spec:
         # the new pod up before releasing the old one's volume attachment
         # — guaranteed deadlock with a single-replica RWO-backed workload.
         # Same fix as vaultwarden's Deployment, same underlying reason.
+service:
+  externalTrafficPolicy: Local
+
         updateStrategy:
           type: Recreate
           rollingUpdate: null
