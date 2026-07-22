@@ -1,0 +1,17 @@
+apiVersion: traefik.io/v1alpha1
+kind: IngressRoute
+metadata:
+  name: pve1
+  namespace: kube-system
+spec:
+  entryPoints:
+    - websecure
+  routes:
+    - match: Host(`pve1.pearsalls.fr`)
+      kind: Rule
+      services:
+        - name: pve1-external
+          port: 8006
+          serversTransport: pve1-insecure-transport
+  tls:
+    certResolver: cloudflare

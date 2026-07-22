@@ -1,0 +1,22 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: pve1-external
+  namespace: kube-system
+spec:
+  ports:
+    - name: https
+      port: 8006
+      targetPort: 8006
+---
+apiVersion: v1
+kind: Endpoints
+metadata:
+  name: pve1-external
+  namespace: kube-system
+subsets:
+  - addresses:
+      - ip: 10.0.10.11
+    ports:
+      - name: https
+        port: 8006
