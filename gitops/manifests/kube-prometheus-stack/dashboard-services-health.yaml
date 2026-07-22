@@ -6,7 +6,7 @@ metadata:
   namespace: monitoring
   labels:
     grafana_dashboard: "1"
-spec:
+data:
   services-health.json: |
     {
       "annotations": { "list": [] },
