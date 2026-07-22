@@ -1,18 +1,20 @@
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
-  name: external-pve1
+  name: external-services
   namespace: argocd
 spec:
   project: default
   source:
     repoURL: https://github.com/richpea1982/k3s
     targetRevision: HEAD
-    path: gitops/manifests/pve1
+    path: gitops/manifests/external-services
   destination:
     server: https://kubernetes.default.svc
-    namespace: kube-system
+    namespace: external-services
   syncPolicy:
     automated:
       prune: true
       selfHeal: true
+    syncOptions:
+      - CreateNamespace=true

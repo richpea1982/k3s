@@ -2,7 +2,7 @@ apiVersion: v1
 kind: Service
 metadata:
   name: pve1-external
-  namespace: kube-system
+  namespace: external-services
 spec:
   ports:
     - name: https

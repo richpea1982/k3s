@@ -1,0 +1,10 @@
+apiVersion: traefik.io/v1alpha1
+kind: Middleware
+metadata:
+  name: pve1-admin-only
+  namespace: external-services
+spec:
+  ipAllowList:
+    sourceRange:
+      - 10.0.0.0/16
+      - 100.64.0.0/10
