@@ -21,7 +21,7 @@ spec:
               app.kubernetes.io/name: traefik
       ports:
         - protocol: TCP
-          port: 80
+          port: 8080
     # Kubelet health probes arrive from the node subnet, not a pod.
     - from:
         - ipBlock:
