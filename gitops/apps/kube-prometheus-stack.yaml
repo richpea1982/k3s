@@ -12,6 +12,13 @@ spec:
     # before first sync — this chart ships frequent releases.
     targetRevision: "87.16.1"
     helm:
+      # The chart ships CRDs via Helm's reserved crds/ directory, which
+      # ignores values entirely (crds.enabled does nothing against it —
+      # confirmed the hard way). skipCrds tells ArgoCD to exclude that
+      # directory from the rendered manifest set at the source level,
+      # which is the only mechanism that actually works for this chart.
+      # CRDs themselves are bootstrapped once via `kubectl apply
+      # --server-side` — see semaphore-dr-setup.md.
       skipCrds: true
       values: |
         prometheus:
@@ -90,6 +97,14 @@ spec:
             enabled: true
             storageClassName: ceph-rbd
             size: 5Gi
+          # Same RWO Ceph RBD deadlock as Vaultwarden/Traefik, just missed
+          # here originally: default RollingUpdate tries to bring the new
+          # pod up before releasing the old one's single-attach volume —
+          # guaranteed stuck Init:0/1 forever. Confirmed the hard way after
+          # this sat silently deadlocked for 47h (old pod stayed healthy,
+          # masking it from health checks).
+          strategy:
+            type: Recreate
           # Traefik IngressRoute for grafana.local.lan (WireGuard-only, per
           # the existing K3s namespace map) is a separate follow-up — not
           # needed to validate the DR pipeline itself.
