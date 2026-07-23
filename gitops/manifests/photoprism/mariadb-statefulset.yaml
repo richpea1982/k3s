@@ -56,13 +56,13 @@ spec:
           startupProbe:
             exec:
               command: ["healthcheck.sh", "--connect"]
-            failureThreshold: 30
+            failureThreshold: 90
             periodSeconds: 10
           readinessProbe:
             exec:
               command: ["healthcheck.sh", "--connect"]
-            initialDelaySeconds: 10
-            periodSeconds: 10
+            initialDelaySeconds: 20
+            periodSeconds: 20
           livenessProbe:
             exec:
               command: ["healthcheck.sh", "--connect"]
