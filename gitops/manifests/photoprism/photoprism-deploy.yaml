@@ -40,7 +40,7 @@ spec:
             - name: PHOTOPRISM_ADMIN_USER
               value: "admin"
             - name: PHOTOPRISM_SITE_URL
-              value: "https://photoprism.pearsalls.fr/"
+              value: "https://photos.pearsalls.fr/"
             - name: PHOTOPRISM_DISABLE_TENSORFLOW
               value: "false"
             - name: PHOTOPRISM_DATABASE_DRIVER
