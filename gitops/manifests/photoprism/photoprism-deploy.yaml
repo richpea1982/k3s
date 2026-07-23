@@ -58,25 +58,31 @@ spec:
               mountPath: /photoprism/originals
             - name: storage
               mountPath: /photoprism/storage
+          startupProbe:
+            httpGet:
+              path: /api/v1/status
+              port: 2342
+            failureThreshold: 30     # Gives up to 300s (5 mins) for DB migrations & initial cert setup
+            periodSeconds: 10
           readinessProbe:
             httpGet:
               path: /api/v1/status
               port: 2342
-            initialDelaySeconds: 15
+            periodSeconds: 10
           livenessProbe:
             httpGet:
               path: /api/v1/status
               port: 2342
-            initialDelaySeconds: 30
+            periodSeconds: 15
           resources:
             requests:
               cpu: 200m
-              memory: 512Mi
+              memory: 1Gi
             limits:
               # Indexing/TensorFlow face-detection runs are the spike, not
               # idle serving — give this real headroom or a big import batch
               # gets OOM-killed mid-index.
-              memory: 2Gi
+              memory: 3Gi
       volumes:
         - name: originals
           persistentVolumeClaim:
