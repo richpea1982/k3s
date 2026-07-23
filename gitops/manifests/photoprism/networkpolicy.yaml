@@ -1,0 +1,75 @@
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: photoprism-isolation
+  namespace: photoprism
+spec:
+  podSelector:
+    matchLabels:
+      app: photoprism
+  policyTypes:
+    - Ingress
+    - Egress
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: kube-system
+          podSelector:
+            matchLabels:
+              app.kubernetes.io/name: traefik
+      ports:
+        - protocol: TCP
+          port: 2342
+    - from:
+        - ipBlock:
+            cidr: 10.0.20.0/24 # kubelet health probes
+      ports:
+        - protocol: TCP
+          port: 2342
+  egress:
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: kube-system
+      ports:
+        - protocol: UDP
+          port: 53
+        - protocol: TCP
+          port: 53
+    - to:
+        - podSelector:
+            matchLabels:
+              app: mariadb
+      ports:
+        - protocol: TCP
+          port: 3306
+    # NFS to the NAS — not a pod, needs an ipBlock egress rule
+    - to:
+        - ipBlock:
+            cidr: 10.0.10.15/32
+      ports:
+        - protocol: TCP
+          port: 2049
+        - protocol: UDP
+          port: 2049
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: mariadb-isolation
+  namespace: photoprism
+spec:
+  podSelector:
+    matchLabels:
+      app: mariadb
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              app: photoprism
+      ports:
+        - protocol: TCP
+          port: 3306

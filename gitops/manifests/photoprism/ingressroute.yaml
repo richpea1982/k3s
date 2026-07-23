@@ -1,0 +1,22 @@
+# Internal-only, same pattern as vault.pearsalls.fr: a real subdomain (needed
+# for Let's Encrypt DNS-01) with no public A/CNAME record — resolve manually
+# via /etc/hosts on admin devices pointing at a K3s node IP, or port-forward,
+# until Unbound split-horizon DNS is live.
+apiVersion: traefik.io/v1alpha1
+kind: IngressRoute
+metadata:
+  name: photoprism
+  namespace: photoprism
+spec:
+  entryPoints:
+    - websecure
+  routes:
+    - match: Host(`photoprism.pearsalls.fr`)
+      kind: Rule
+      middlewares:
+        - name: photoprism-admin-only
+      services:
+        - name: photoprism
+          port: 2342
+  tls:
+    certResolver: cloudflare

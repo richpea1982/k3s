@@ -1,0 +1,24 @@
+# Internal-only — VPN (WireGuard/Tailscale) access only, same as Photoprism
+# and Vaultwarden. "External" here only means the Jellyfin workload itself
+# lives outside K3s (the GPU-pinned LXC on pve2) — it is NOT exposed via
+# the Cloudflare Tunnel. Real subdomain (needed for DNS-01), no public
+# A/CNAME record — resolve via /etc/hosts on admin/client devices pointing
+# at a K3s node IP, or port-forward, until Unbound split-horizon DNS lands.
+apiVersion: traefik.io/v1alpha1
+kind: IngressRoute
+metadata:
+  name: jellyfin
+  namespace: jellyfin
+spec:
+  entryPoints:
+    - websecure
+  routes:
+    - match: Host(`jellyfin.pearsalls.fr`)
+      kind: Rule
+      middlewares:
+        - name: jellyfin-admin-only
+      services:
+        - name: jellyfin-external
+          port: 8096
+  tls:
+    certResolver: cloudflare

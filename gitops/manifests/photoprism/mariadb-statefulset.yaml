@@ -1,0 +1,72 @@
+# Same reasoning as Postgres for Vaultwarden: a live RDBMS needs a real
+# block device for WAL/fsync guarantees. NFS is fine for Photoprism's bulk
+# photo library (sequential-access blobs) but not for the metadata DB.
+apiVersion: v1
+kind: Service
+metadata:
+  name: mariadb
+  namespace: photoprism
+spec:
+  clusterIP: None
+  selector:
+    app: mariadb
+  ports:
+    - port: 3306
+      targetPort: 3306
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: mariadb
+  namespace: photoprism
+spec:
+  serviceName: mariadb
+  replicas: 1
+  selector:
+    matchLabels:
+      app: mariadb
+  template:
+    metadata:
+      labels:
+        app: mariadb
+    spec:
+      containers:
+        - name: mariadb
+          image: mariadb:11
+          ports:
+            - containerPort: 3306
+          envFrom:
+            - secretRef:
+                # Provides MYSQL_ROOT_PASSWORD / MYSQL_DATABASE /
+                # MYSQL_USER / MYSQL_PASSWORD. Created manually — see
+                # PHOTOPRISM-README.md (to write). Not in Git, same as
+                # vaultwarden-secrets / velero-minio-credentials.
+                name: photoprism-secrets
+          volumeMounts:
+            - name: mariadb-data
+              mountPath: /var/lib/mysql
+          readinessProbe:
+            exec:
+              command: ["healthcheck.sh", "--connect"]
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          livenessProbe:
+            exec:
+              command: ["healthcheck.sh", "--connect"]
+            initialDelaySeconds: 30
+            periodSeconds: 20
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              memory: 768Mi
+  volumeClaimTemplates:
+    - metadata:
+        name: mariadb-data
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        storageClassName: ceph-rbd
+        resources:
+          requests:
+            storage: 5Gi

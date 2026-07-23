@@ -1,0 +1,12 @@
+apiVersion: traefik.io/v1alpha1
+kind: Middleware
+metadata:
+  name: photoprism-admin-only
+  namespace: photoprism
+spec:
+  ipAllowList:
+    sourceRange:
+      # Management VLAN (VLAN10) — same scope as grafana-admin-only / argocd-admin-only
+      - 10.0.0.0/16
+      # Tailscale CGNAT range — replace with the WireGuard client subnet once that migration lands
+      - 100.64.0.0/10

@@ -1,0 +1,31 @@
+# Jellyfin itself is NOT a K3s workload — it's the privileged LXC on pve2
+# (10.0.30.10), pinned there for iGPU passthrough. This is the same
+# selector-less-Service + manual-Endpoints pattern already used for scraping
+# external VMs with Prometheus — here it's routing, not monitoring, but the
+# mechanism is identical: a Service with no selector just needs its
+# Endpoints/EndpointSlice object populated manually, and Traefik treats it
+# like any other backend.
+#
+# REQUIRES a new OPNsense rule: VLAN20 (K3s pods, 10.0.20.0/24) -> pve2's
+# LXC IP 10.0.30.10:8096, allow. Same shape as the existing VLAN20 ->
+# 10.0.10.17:8080 alert-router rule. Nothing routes without this.
+apiVersion: v1
+kind: Service
+metadata:
+  name: jellyfin-external
+  namespace: jellyfin
+spec:
+  ports:
+    - port: 8096
+      targetPort: 8096
+---
+apiVersion: v1
+kind: Endpoints
+metadata:
+  name: jellyfin-external
+  namespace: jellyfin
+subsets:
+  - addresses:
+      - ip: 10.0.30.10
+    ports:
+      - port: 8096

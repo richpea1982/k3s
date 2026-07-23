@@ -1,0 +1,110 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: photoprism
+  namespace: photoprism
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate # single RWX-but-still-one-writer app + local index cache;
+                    # same rolling-update deadlock class as Vaultwarden/Traefik
+                    # if you ever add a second replica pointed at the same PVC.
+  selector:
+    matchLabels:
+      app: photoprism
+  template:
+    metadata:
+      labels:
+        app: photoprism
+    spec:
+      initContainers:
+        - name: wait-for-mariadb
+          image: busybox:1.36
+          command:
+            - sh
+            - -c
+            - |
+              until nc -z -w2 mariadb 3306; do
+                echo "waiting for mariadb..."
+                sleep 2
+              done
+      containers:
+        - name: photoprism
+          image: photoprism/photoprism:latest # pin a specific tag once you've
+                                               # confirmed a working version —
+                                               # same "no floating latest" logic
+                                               # as the Debian VM image pin
+          ports:
+            - containerPort: 2342
+          env:
+            - name: PHOTOPRISM_ADMIN_USER
+              value: "admin"
+            - name: PHOTOPRISM_SITE_URL
+              value: "https://photoprism.pearsalls.fr/"
+            - name: PHOTOPRISM_DISABLE_TENSORFLOW
+              value: "false"
+            - name: PHOTOPRISM_DATABASE_DRIVER
+              value: "mysql"
+            - name: PHOTOPRISM_DATABASE_SERVER
+              value: "mariadb:3306"
+          envFrom:
+            - secretRef:
+                # Provides PHOTOPRISM_ADMIN_PASSWORD, PHOTOPRISM_DATABASE_NAME,
+                # PHOTOPRISM_DATABASE_USER, PHOTOPRISM_DATABASE_PASSWORD —
+                # must match the values used in photoprism-secrets for MariaDB.
+                name: photoprism-secrets
+          volumeMounts:
+            - name: originals
+              mountPath: /photoprism/originals
+            - name: storage
+              mountPath: /photoprism/storage
+          readinessProbe:
+            httpGet:
+              path: /api/v1/status
+              port: 2342
+            initialDelaySeconds: 15
+          livenessProbe:
+            httpGet:
+              path: /api/v1/status
+              port: 2342
+            initialDelaySeconds: 30
+          resources:
+            requests:
+              cpu: 200m
+              memory: 512Mi
+            limits:
+              # Indexing/TensorFlow face-detection runs are the spike, not
+              # idle serving — give this real headroom or a big import batch
+              # gets OOM-killed mid-index.
+              memory: 2Gi
+      volumes:
+        - name: originals
+          persistentVolumeClaim:
+            claimName: photoprism-originals
+        - name: storage
+          persistentVolumeClaim:
+            claimName: photoprism-cache
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: photoprism-cache
+  namespace: photoprism
+spec:
+  accessModes: ["ReadWriteOnce"]
+  storageClassName: ceph-rbd
+  resources:
+    requests:
+      storage: 10Gi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: photoprism
+  namespace: photoprism
+spec:
+  selector:
+    app: photoprism
+  ports:
+    - port: 2342
+      targetPort: 2342
