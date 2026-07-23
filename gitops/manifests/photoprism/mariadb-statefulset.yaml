@@ -45,6 +45,19 @@ spec:
           volumeMounts:
             - name: mariadb-data
               mountPath: /var/lib/mysql
+          # First-run init (creating the InnoDB system tablespace, building
+          # the initial DB) can comfortably exceed the old liveness probe's
+          # ~70s kill window under a 100m CPU *request* on a busy node — the
+          # probe killing the container mid-write to ibdata1 is what
+          # corrupted it the first time. startupProbe holds liveness/
+          # readiness off entirely until first-boot genuinely succeeds once
+          # (up to 150s here), which is the correct fix for a slow-starting
+          # container, not just pushing initialDelaySeconds out further.
+          startupProbe:
+            exec:
+              command: ["healthcheck.sh", "--connect"]
+            failureThreshold: 30
+            periodSeconds: 5
           readinessProbe:
             exec:
               command: ["healthcheck.sh", "--connect"]
