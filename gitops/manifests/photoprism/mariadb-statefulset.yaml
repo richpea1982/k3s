@@ -57,7 +57,7 @@ spec:
             exec:
               command: ["healthcheck.sh", "--connect"]
             failureThreshold: 30
-            periodSeconds: 5
+            periodSeconds: 10
           readinessProbe:
             exec:
               command: ["healthcheck.sh", "--connect"]
