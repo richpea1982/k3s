@@ -62,7 +62,7 @@ spec:
             httpGet:
               path: /api/v1/status
               port: 2342
-            failureThreshold: 30     # Gives up to 300s (5 mins) for DB migrations & initial cert setup
+            failureThreshold: 90     # Gives up to 300s (5 mins) for DB migrations & initial cert setup
             periodSeconds: 10
           readinessProbe:
             httpGet:
