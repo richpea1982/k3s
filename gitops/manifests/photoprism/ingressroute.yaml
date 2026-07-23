@@ -11,7 +11,7 @@ spec:
   entryPoints:
     - websecure
   routes:
-    - match: Host(`photoprism.pearsalls.fr`)
+    - match: Host(`photos.pearsalls.fr`)
       kind: Rule
       middlewares:
         - name: photoprism-admin-only
