@@ -25,8 +25,8 @@ spec:
           prometheusSpec:
             retention: 15d
             resources:
-              requests: { cpu: 200m, memory: 512Mi }
-              limits: { memory: 2Gi }
+              requests: { cpu: 200m, memory: 768Mi }
+              limits: { memory: 1536Mi }
             # Ceph RBD, deliberately: if Prometheus data lived on local-path
             # and the node it was scheduled on is the one that dies, you lose
             # the exact history needed to confirm the DR pipeline worked.
