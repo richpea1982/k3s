@@ -14,7 +14,9 @@ spec:
         agent:
           env:
             - name: COLLECTIONS
-              value: "crowdsecurity/traefik crowdsecurity/cri-logs crowdsecurity/linux"
+              value: "crowdsecurity/traefik crowdsecurity/linux"
+            - name: PARSERS
+              value: "crowdsecurity/cri-logs"
           acquisition:
             - namespace: kube-system
               podName: traefik-*
