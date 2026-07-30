@@ -12,10 +12,14 @@ spec:
     helm:
       values: |
         agent:
+          env:
+            - name: COLLECTIONS
+              value: "crowdsecurity/traefik crowdsecurity/cri-logs crowdsecurity/linux"
           acquisition:
             - namespace: kube-system
               podName: traefik-*
               program: traefik
+              poll_without_inotify: true
   destination:
     server: https://kubernetes.default.svc
     namespace: kube-system
