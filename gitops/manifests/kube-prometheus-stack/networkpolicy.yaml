@@ -11,7 +11,6 @@ spec:
     - Ingress
     - Egress
   ingress:
-    # Only Traefik in kube-system can reach Grafana
     - from:
         - namespaceSelector:
             matchLabels:
@@ -22,7 +21,6 @@ spec:
       ports:
         - protocol: TCP
           port: 3000
-    # Kubelet health probes from node subnet
     - from:
         - ipBlock:
             cidr: 10.0.20.0/24
@@ -30,7 +28,6 @@ spec:
         - protocol: TCP
           port: 3000
   egress:
-    # Outbound DNS resolution (CoreDNS in kube-system)
     - to:
         - namespaceSelector:
             matchLabels:
@@ -40,7 +37,6 @@ spec:
           port: 53
         - protocol: TCP
           port: 53
-    # Queries to Prometheus server in the same namespace
     - to:
         - podSelector:
             matchLabels:
@@ -48,17 +44,23 @@ spec:
       ports:
         - protocol: TCP
           port: 9090
-    # K3s API Server Cluster IP (Required for sidecars to list Secrets/ConfigMaps)
     - to:
         - ipBlock:
             cidr: 10.43.0.1/32
       ports:
         - protocol: TCP
           port: 443
-    # K3s Control Plane Nodes (API server backend on port 6443)
     - to:
         - ipBlock:
             cidr: 10.0.20.0/24
       ports:
         - protocol: TCP
           port: 6443
+    # --- ADD THIS RULE FOR POSTGRESQL ---
+    - to:
+        - podSelector:
+            matchLabels:
+              app: grafana-postgres
+      ports:
+        - protocol: TCP
+          port: 5432
