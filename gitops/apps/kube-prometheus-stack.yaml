@@ -90,6 +90,9 @@ spec:
                     send_resolved: true
 
         grafana:
+          # Helm chart expects env as map/dictionary format (KEY: "value")
+          env:
+            GF_DATABASE_WAL: "true"
           resources:
             requests: { cpu: 50m, memory: 128Mi }
             limits: { memory: 256Mi }
@@ -97,23 +100,17 @@ spec:
             enabled: true
             storageClassName: ceph-rbd
             size: 5Gi
-          # Same RWO Ceph RBD deadlock as Vaultwarden/Traefik, just missed
-          # here originally: default RollingUpdate tries to bring the new
-          # pod up before releasing the old one's single-attach volume —
-          # guaranteed stuck Init:0/1 forever. Confirmed the hard way after
-          # this sat silently deadlocked for 47h (old pod stayed healthy,
-          # masking it from health checks).
+          # Same RWO Ceph RBD deadlock as Vaultwarden/Traefik: default RollingUpdate
+          # tries to bring up the new pod before releasing the single-attach volume.
           strategy:
             type: Recreate
           sidecar:
             dashboards:
               env:
-                - name: REQ_HEALTH_PORT
-                  value: "10801"
+                REQ_HEALTH_PORT: "10801"
             datasources:
               env:
-                - name: REQ_HEALTH_PORT
-                  value: "10802"
+                REQ_HEALTH_PORT: "10802"
 
         kubeStateMetrics:
           enabled: true
