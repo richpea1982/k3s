@@ -30,7 +30,22 @@ spec:
             serviceMonitorSelectorNilUsesHelmValues: false
             podMonitorSelectorNilUsesHelmValues: false
             ruleSelectorNilUsesHelmValues: false
-
+            # SMART metrics from physical hosts (pve1-4, NAS) — these sit
+            # outside K3s entirely, so this is additionalScrapeConfigs
+            # (static targets), not a ServiceMonitor. Requires the OPNsense
+            # rule VLAN20 -> 10.0.10.11-15:9633 (same shape as the existing
+            # VLAN20 -> 10.0.10.17:8080 alert-router rule).
+            additionalScrapeConfigs:
+              - job_name: 'smartctl-exporter'
+                static_configs:
+                  - targets:
+                      - '10.0.10.11:9633'   # pve1
+                      - '10.0.10.12:9633'   # pve2
+                      - '10.0.10.13:9633'   # pve3
+                      - '10.0.10.14:9633'   # pve4
+                      - '10.0.10.15:9633'   # NAS
+                    labels:
+                      env: homelab
           additionalPrometheusRulesMap:
             k3s-node-health:
               groups:
@@ -44,7 +59,6 @@ spec:
                       annotations:
                         summary: "K3s node {{ $labels.node }} has been NotReady for 5+ minutes"
                         description: "Fires the alert-router on pve1: Terraform replace + Ansible rejoin for this node."
-
         alertmanager:
           alertmanagerSpec:
             resources:
@@ -71,7 +85,6 @@ spec:
                 webhook_configs:
                   - url: "http://10.0.10.17:8080/webhook/alertmanager"
                     send_resolved: true
-
         grafana:
           resources:
             requests: { cpu: 50m, memory: 128Mi }
@@ -80,13 +93,11 @@ spec:
           # Disable local PVC storage; Grafana state lives in Postgres
           persistence:
             enabled: false
-
           envValueFrom:
             GF_DATABASE_PASSWORD:
               secretKeyRef:
                 name: grafana-db-secret
                 key: password
-
           grafana.ini:
             database:
               type: postgres
@@ -96,7 +107,6 @@ spec:
               ssl_mode: disable
             analytics:
               check_for_updates: false
-
           strategy:
             type: Recreate
           sidecar:
@@ -106,7 +116,6 @@ spec:
             datasources:
               env:
                 REQ_HEALTH_PORT: "10802"
-
         kubeStateMetrics:
           enabled: true
         nodeExporter:
