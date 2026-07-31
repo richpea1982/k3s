@@ -15,9 +15,11 @@ spec:
         prometheus:
           prometheusSpec:
             retention: 15d
+            retentionSize: "25Gi"         # Prevents unexpected TSDB growth
+            walCompression: true          # Reduces WAL disk footprint and RAM spike during replay
             resources:
-              requests: { cpu: 200m, memory: 768Mi }
-              limits: { memory: 1536Mi }
+              requests: { cpu: 200m, memory: 1536Mi }
+              limits: { memory: 3584Mi }
             storageSpec:
               volumeClaimTemplate:
                 spec:
