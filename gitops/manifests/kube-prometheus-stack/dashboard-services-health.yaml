@@ -1,115 +1,119 @@
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: grafana-dashboard-services-health
+  name: grafana-dashboard-infra-at-a-glance
   namespace: monitoring
   labels:
     grafana_dashboard: "1"
 data:
-  services-health.json: |-
+  infra-at-a-glance.json: |-
     {
       "annotations": { "list": [] },
       "editable": true,
-      "fiscalYearStartMonth": 0,
       "graphTooltip": 1,
       "id": null,
-      "title": "Services at a Glance",
-      "tags": ["k3s", "health"],
+      "title": "Infrastructure - At a Glance",
+      "tags": ["nodes", "hardware", "infra"],
       "timezone": "browser",
       "schemaVersion": 38,
       "panels": [
         {
-          "title": "Pod Health & Resource Usage",
-          "type": "table",
-          "gridPos": { "h": 16, "w": 24, "x": 0, "y": 0 },
+          "title": "CPU Usage per Host",
+          "type": "stat",
+          "gridPos": { "h": 8, "w": 8, "x": 0, "y": 0 },
           "targets": [
             {
               "datasource": { "type": "prometheus" },
-              "expr": "sum(kube_pod_status_phase{phase=\"Running\"}) by (namespace, pod)",
-              "legendFormat": "Running",
-              "format": "table",
-              "instant": true,
+              "expr": "100 - (avg by (instance) (rate(node_cpu_seconds_total{mode=\"idle\"}[5m])) * 100)",
+              "legendFormat": "{{instance}}",
               "refId": "A"
-            },
-            {
-              "datasource": { "type": "prometheus" },
-              "expr": "sum(rate(container_cpu_usage_seconds_total{container!=\"\"}[5m])) by (namespace, pod)",
-              "legendFormat": "CPU",
-              "format": "table",
-              "instant": true,
-              "refId": "B"
-            },
-            {
-              "datasource": { "type": "prometheus" },
-              "expr": "sum(container_memory_working_set_bytes{container!=\"\"}) by (namespace, pod) / sum(kube_pod_container_resource_limits{resource=\"memory\"}) by (namespace, pod)",
-              "legendFormat": "RAM",
-              "format": "table",
-              "instant": true,
-              "refId": "C"
-            }
-          ],
-          "transformations": [
-            {
-              "id": "merge",
-              "options": {}
-            },
-            {
-              "id": "organize",
-              "options": {
-                "excludeByName": {
-                  "Time": true
-                },
-                "renameByName": {
-                  "Value #A": "Status (Running)",
-                  "Value #B": "CPU Usage (% of Core)",
-                  "Value #C": "RAM Usage (% of Limit)"
-                }
-              }
             }
           ],
           "fieldConfig": {
             "defaults": {
-              "custom": {
-                "align": "auto",
-                "cellOptions": {
-                  "type": "auto"
-                }
-              }
-            },
-            "overrides": [
-              {
-                "matcher": {
-                  "id": "byName",
-                  "options": "CPU Usage (% of Core)"
-                },
-                "properties": [
-                  {
-                    "id": "unit",
-                    "value": "percentunit"
-                  },
-                  {
-                    "id": "decimals",
-                    "value": 2
-                  }
-                ]
-              },
-              {
-                "matcher": {
-                  "id": "byName",
-                  "options": "RAM Usage (% of Limit)"
-                },
-                "properties": [
-                  {
-                    "id": "unit",
-                    "value": "percentunit"
-                  },
-                  {
-                    "id": "decimals",
-                    "value": 1
-                  }
+              "color": { "mode": "thresholds" },
+              "unit": "percent",
+              "decimals": 1,
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  { "color": "green", "value": null },
+                  { "color": "yellow", "value": 70 },
+                  { "color": "red", "value": 85 }
                 ]
               }
-            ]
+            }
+          },
+          "options": {
+            "reduceOptions": { "values": false, "calcs": ["lastNotNull"], "fields": "" },
+            "orientation": "auto",
+            "textMode": "auto"
+          }
+        },
+        {
+          "title": "RAM Usage per Host",
+          "type": "stat",
+          "gridPos": { "h": 8, "w": 8, "x": 8, "y": 0 },
+          "targets": [
+            {
+              "datasource": { "type": "prometheus" },
+              "expr": "100 * (1 - (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes))",
+              "legendFormat": "{{instance}}",
+              "refId": "A"
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "color": { "mode": "thresholds" },
+              "unit": "percent",
+              "decimals": 1,
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  { "color": "green", "value": null },
+                  { "color": "yellow", "value": 75 },
+                  { "color": "red", "value": 90 }
+                ]
+              }
+            }
+          },
+          "options": {
+            "reduceOptions": { "values": false, "calcs": ["lastNotNull"], "fields": "" },
+            "orientation": "auto",
+            "textMode": "auto"
+          }
+        },
+        {
+          "title": "Root Disk Usage (/) per Host",
+          "type": "stat",
+          "gridPos": { "h": 8, "w": 8, "x": 16, "y": 0 },
+          "targets": [
+            {
+              "datasource": { "type": "prometheus" },
+              "expr": "100 * (1 - (node_filesystem_avail_bytes{mountpoint=\"/\",fstype!~\"tmpfs|overlay\"} / node_filesystem_size_bytes{mountpoint=\"/\",fstype!~\"tmpfs|overlay\"}))",
+              "legendFormat": "{{instance}}",
+              "refId": "A"
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "color": { "mode": "thresholds" },
+              "unit": "percent",
+              "decimals": 1,
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  { "color": "green", "value": null },
+                  { "color": "yellow", "value": 80 },
+                  { "color": "red", "value": 90 }
+                ]
+              }
+            }
+          },
+          "options": {
+            "reduceOptions": { "values": false, "calcs": ["lastNotNull"], "fields": "" },
+            "orientation": "auto",
+            "textMode": "auto"
           }
         }
       ]
