@@ -15,7 +15,7 @@ spec:
         prometheus:
           prometheusSpec:
             retention: 15d
-            retentionSize: "25Gi"         # Prevents unexpected TSDB growth
+            retentionSize: "25GiB"         # Prevents unexpected TSDB growth
             walCompression: true          # Reduces WAL disk footprint and RAM spike during replay
             resources:
               requests: { cpu: 200m, memory: 1536Mi }
