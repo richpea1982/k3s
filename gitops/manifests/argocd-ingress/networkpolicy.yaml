@@ -28,4 +28,4 @@ spec:
             cidr: 10.0.20.0/24
       ports:
         - protocol: TCP
-          port: 8083   # argocd-server's own readiness/liveness probe port
+          port: 8080   # argocd-server's own readiness/liveness probe port
