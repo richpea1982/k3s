@@ -1,0 +1,32 @@
+apiVersion: monitoring.coreos.com/v1alpha1
+kind: AlertmanagerConfig
+metadata:
+  name: telegram-alerts
+  namespace: monitoring
+  labels:
+    release: kube-prometheus-stack
+spec:
+  route:
+    groupBy: ['alertname', 'namespace']
+    groupWait: 30s
+    groupInterval: 5m
+    repeatInterval: 12h
+    receiver: 'telegram'
+  receivers:
+  - name: 'telegram'
+    telegramConfigs:
+    - botToken:
+        name: telegram-secret
+        key: token
+      chatID: 8885354199
+      parseMode: 'HTML'
+      sendResolved: true
+      message: |
+        <b>{{ if eq .Status "firing" }}🚨 ALERT FIRING{{ else }}✅ ALERT RESOLVED{{ end }}</b>
+        
+        <b>Alert:</b> {{ .CommonLabels.alertname }}
+        <b>Severity:</b> {{ .CommonLabels.severity }}
+        <b>Namespace:</b> {{ .CommonLabels.namespace }}
+        
+        <b>Summary:</b> {{ .CommonAnnotations.summary }}
+        <b>Description:</b> {{ .CommonAnnotations.description }}
