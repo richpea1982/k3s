@@ -1,0 +1,50 @@
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: smart-drive-alerts
+  namespace: monitoring
+  labels:
+    release: kube-prometheus-stack
+spec:
+  groups:
+  - name: smartctl.rules
+    rules:
+    # 🚨 CRITICAL: Drive SMART Self-Assessment Failed
+    - alert: SmartDeviceFailed
+      expr: smartctl_device_smart_status_failed == 1
+      for: 2m
+      labels:
+        severity: critical
+      annotations:
+        summary: "SMART failure on {{ $labels.instance }}"
+        description: "Drive {{ $labels.device }} on {{ $labels.instance }} reported a SMART status failure! Imminent hardware failure expected."
+
+    # 🚨 CRITICAL: NVMe Controller Critical Warning Flag
+    - alert: NvmeCriticalWarning
+      expr: smartctl_device_critical_warning != 0
+      for: 2m
+      labels:
+        severity: critical
+      annotations:
+        summary: "NVMe Critical Warning on {{ $labels.instance }}"
+        description: "NVMe drive {{ $labels.device }} on {{ $labels.instance }} reported a critical warning state (value: {{ $value }})."
+
+    # ⚠️ WARNING: Drive Accumulating Bad Sectors
+    - alert: SmartBadSectorsDetected
+      expr: smartctl_device_attribute_raw_value{attribute_name=~"Reallocated_Sector_Ct|Current_Pending_Sector"} > 0
+      for: 5m
+      labels:
+        severity: warning
+      annotations:
+        summary: "Bad sectors detected on {{ $labels.instance }}"
+        description: "Drive {{ $labels.device }} on {{ $labels.instance }} has accumulated bad sectors ({{ $labels.attribute_name }} = {{ $value }}). Consider scheduling disk replacement."
+
+    # ⚠️ WARNING: High Drive Temperature (> 55°C)
+    - alert: SmartHighDriveTemperature
+      expr: smartctl_device_temperature_celsius > 55
+      for: 10m
+      labels:
+        severity: warning
+      annotations:
+        summary: "High drive temperature on {{ $labels.instance }}"
+        description: "Drive {{ $labels.device }} on {{ $labels.instance }} temperature reached {{ $value }}°C (threshold: 55°C)."
