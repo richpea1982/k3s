@@ -20,7 +20,7 @@ spec:
             topologySpreadConstraints:
               - maxSkew: 1
                 topologyKey: kubernetes.io/hostname
-                whenUnsatisfiable: ScheduleAnyway
+                whenUnsatisfiable: DoNotSchedule
                 labelSelector:
                   matchLabels:
                     workload-tier: memory-heavy
@@ -95,7 +95,7 @@ spec:
           topologySpreadConstraints:
             - maxSkew: 1
               topologyKey: kubernetes.io/hostname
-              whenUnsatisfiable: ScheduleAnyway
+              whenUnsatisfiable: DoNotSchedule
               labelSelector:
                 matchLabels:
                   workload-tier: memory-heavy
