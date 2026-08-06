@@ -14,6 +14,20 @@ spec:
       values: |
         prometheus:
           prometheusSpec:
+            podMetadata:
+              labels:
+                workload-tier: memory-heavy
+            affinity:
+              podAntiAffinity:
+                preferredDuringSchedulingIgnoredDuringExecution:
+                  - weight: 100
+                    podAffinityTerm:
+                      labelSelector:
+                        matchExpressions:
+                          - key: workload-tier
+                            operator: In
+                            values: ["memory-heavy"]
+                      topologyKey: kubernetes.io/hostname
             retention: 15d
             retentionSize: "25GiB"         # Prevents unexpected TSDB growth
             walCompression: true          # Reduces WAL disk footprint and RAM spike during replay
@@ -86,6 +100,19 @@ spec:
                   - url: "http://10.0.10.17:8080/webhook/alertmanager"
                     send_resolved: true
         grafana:
+          podLabels:
+            workload-tier: memory-heavy
+          affinity:
+            podAntiAffinity:
+              preferredDuringSchedulingIgnoredDuringExecution:
+                - weight: 100
+                  podAffinityTerm:
+                    labelSelector:
+                      matchExpressions:
+                        - key: workload-tier
+                          operator: In
+                          values: ["memory-heavy"]
+                    topologyKey: kubernetes.io/hostname
           resources:
             requests: { cpu: 50m, memory: 128Mi }
             limits: { memory: 256Mi }
