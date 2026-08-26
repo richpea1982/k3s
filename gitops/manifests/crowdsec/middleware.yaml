@@ -1,0 +1,12 @@
+apiVersion: traefik.io/v1alpha1
+kind: Middleware
+metadata:
+  name: crowdsec-bouncer
+  namespace: kube-system
+spec:
+  plugin:
+    crowdsec-bouncer:
+      enabled: true
+      crowdsecMode: stream
+      crowdsecLapiHost: "crowdsec-service.kube-system.svc.cluster.local:8080"
+      crowdsecLapiKeySecret: "crowdsec-bouncer-api-key"

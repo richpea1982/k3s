@@ -11,3 +11,23 @@ spec:
       # Tailscale CGNAT range — replace with the WireGuard client subnet once that migration lands
       - 100.64.0.0/10
       - 10.42.0.0/16
+apiVersion: traefik.io/v1alpha1
+kind: IngressRoute
+metadata:
+  name: photoprism
+  namespace: photoprism
+spec:
+  entryPoints:
+    - websecure
+  routes:
+    - match: Host(`photos.pearsalls.fr`)
+      kind: Rule
+      middlewares:
+        - name: crowdsec-bouncer
+          namespace: kube-system
+        - name: photoprism-admin-only
+      services:
+        - name: photoprism
+          port: 2342
+  tls:
+    certResolver: cloudflare

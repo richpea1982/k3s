@@ -111,3 +111,9 @@ spec:
       selfHeal: true
     syncOptions:
       - CreateNamespace=true
+# Add to helm values in gitops/apps/traefik.yaml
+experimental:
+  plugins:
+    crowdsec-bouncer:
+      moduleName: "github.com/maxhere/crowdsec-bouncer-traefik-plugin"
+      version: "v1.4.1"
