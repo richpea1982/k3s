@@ -11,17 +11,15 @@ spec:
   entryPoints:
     - websecure
   routes:
-    - match: Host(`photos.pearsalls.fr`)
+    - match: Host(\`photos.pearsalls.fr\`)
       kind: Rule
-      middlewares:
-        - name: photoprism-admin-only
       services:
         - name: photoprism
           port: 2342
       middlewares:
         - name: crowdsec-bouncer
           namespace: kube-system
-
+        - name: photoprism-admin-only
+          namespace: photoprism
   tls:
-    certResolver: cloudflare
-
+    secretName: photos-pearsalls-fr-tls
