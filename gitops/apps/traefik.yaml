@@ -11,80 +11,61 @@ spec:
     targetRevision: "30.0.2"
     helm:
       values: |
-        # Preserve real client source IPs. Default (Cluster) traffic policy
-        # SNATs every inbound connection to the receiving node's own IP
-        # before it reaches any pod — confirmed the hard way via the
-        # argocd-admin-only IPAllowList middleware seeing 10.0.20.21
-        # (a node IP) instead of any real client, for every single request.
-        # Local skips that SNAT hop. Tradeoff: a node not currently running
-        # a Traefik pod silently drops traffic instead of forwarding it —
-        # a non-issue at a single replica, worth remembering if Traefik is
-        # ever scaled across nodes.
+        # Preserve real client source IPs
         service:
           spec:
             externalTrafficPolicy: Local
             loadBalancerIP: "10.0.20.24"
+
         providers:
           kubernetesCRD:
             enabled: true
+            allowCrossNamespace: true # FIX 1: Allows referencing kube-system/crowdsec-bouncer
           kubernetesIngress:
             enabled: true
-        # Per-request access logs — needed to actually see what Traefik
-        # decides (matched router, middleware verdicts, client IP, status
-        # code) instead of only controller/startup noise. Off by default.
+
+        # FIX 2: Moved inside helm values block
+        experimental:
+          plugins:
+            crowdsec-bouncer:
+              moduleName: "github.com/maxhere/crowdsec-bouncer-traefik-plugin"
+              version: "v1.4.1"
+
+        # OPTIONAL: Applies CrowdSec globally to ALL HTTPS routes on the websecure entrypoint
+        # ports:
+        #   websecure:
+        #     middlewares:
+        #       - kube-system-crowdsec-bouncer@kubernetescrd
+
+        # Per-request access logs
         logs:
           access:
             enabled: true
             fields:
               headers:
                 defaultMode: keep
-        # RWO Ceph RBD volume (acme.json) can only attach to one pod at a
-        # time. The chart's default RollingUpdate strategy tries to bring
-        # the new pod up before releasing the old one's volume attachment
-        # — guaranteed deadlock with a single-replica RWO-backed workload.
-        # Same fix as vaultwarden's Deployment, same underlying reason.
+
         updateStrategy:
           type: Recreate
           rollingUpdate: null
-        # --- ACME / Let's Encrypt via Cloudflare DNS-01 ---
-        # Used for internal-only *.pearsalls.fr hosts (e.g. vault.pearsalls.fr)
-        # that never get a Cloudflare Tunnel entry and are never publicly
-        # reachable. DNS-01 only requires proving control of the DNS zone —
-        # it does NOT require the hostname to resolve to anything real or
-        # be reachable from the internet. No A/CNAME record is created for
-        # these hosts; resolution happens purely via local /etc/hosts
-        # overrides on admin devices, same as the current .local.lan scheme.
+
         additionalArguments:
           - "--certificatesresolvers.cloudflare.acme.email=rpearsall1982@gmail.com"
           - "--certificatesresolvers.cloudflare.acme.storage=/data/acme.json"
           - "--certificatesresolvers.cloudflare.acme.dnschallenge=true"
           - "--certificatesresolvers.cloudflare.acme.dnschallenge.provider=cloudflare"
           - "--certificatesresolvers.cloudflare.acme.dnschallenge.resolvers=1.1.1.1:53,8.8.8.8:53"
-          # Confirmed working end-to-end against staging (2026-07-18) — cert
-          # for vault.pearsalls.fr issued successfully. Reverting to
-          # production (default, no caserver override needed below).
-          # - "--certificatesresolvers.cloudflare.acme.caserver=https://acme-staging-v02.api.letsencrypt.org/directory"
+
         envFrom:
           - secretRef:
-              # Provides CF_DNS_API_TOKEN — a Cloudflare API token scoped to
-              # Zone:DNS:Edit on the pearsalls.fr zone ONLY (not the Tunnel
-              # token, not a Global API Key). Created manually, not in Git —
-              # see TRAEFIK-TLS-README.md.
               name: traefik-cloudflare-dns-token
-        # acme.json must survive pod restarts, or every restart re-requests
-        # every cert and risks the Let's Encrypt rate limit.
+
         persistence:
           enabled: true
           storageClass: ceph-rbd
           size: 1Gi
           path: /data
-        # Ceph RBD's CSI driver doesn't reliably honor the pod's fsGroup
-        # (a common limitation, not unique to this setup) — the fresh PVC
-        # comes back root:root, and Traefik's non-root container (UID
-        # 65532) can't write acme.json to it. This is the Traefik Helm
-        # chart's own documented workaround for exactly this class of
-        # problem (see the chart's values.yaml comments for
-        # deployment.initContainers).
+
         deployment:
           initContainers:
             - name: volume-permissions
@@ -111,9 +92,3 @@ spec:
       selfHeal: true
     syncOptions:
       - CreateNamespace=true
-# Add to helm values in gitops/apps/traefik.yaml
-experimental:
-  plugins:
-    crowdsec-bouncer:
-      moduleName: "github.com/maxhere/crowdsec-bouncer-traefik-plugin"
-      version: "v1.4.1"
