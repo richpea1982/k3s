@@ -83,6 +83,15 @@ spec:
               securityContext:
                 runAsNonRoot: false
                 runAsUser: 0
+          additionalVolumes:
+            - name: crowdsec-bouncer-key
+              secret:
+                secretName: crowdsec-traefik-bouncer-key
+        additionalVolumeMounts:
+          - name: crowdsec-bouncer-key
+            mountPath: /etc/crowdsec-bouncer
+            readOnly: true
+
   destination:
     server: https://kubernetes.default.svc
     namespace: kube-system

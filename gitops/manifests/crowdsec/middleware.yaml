@@ -9,4 +9,4 @@ spec:
       enabled: true
       crowdsecMode: stream
       crowdsecLapiHost: "crowdsec-service.kube-system.svc.cluster.local:8080"
-      crowdsecLapiKeySecret: "crowdsec-traefik-bouncer-key"
+      crowdsecLapiKeyFile: "/etc/crowdsec-bouncer/key"
