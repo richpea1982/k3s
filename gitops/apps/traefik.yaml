@@ -87,10 +87,10 @@ spec:
             - name: crowdsec-bouncer-key
               secret:
                 secretName: crowdsec-traefik-bouncer-key
-        additionalVolumeMounts:
-          - name: crowdsec-bouncer-key
-            mountPath: /etc/crowdsec-bouncer
-            readOnly: true
+          additionalVolumeMounts:
+            - name: crowdsec-bouncer-key
+              mountPath: /etc/crowdsec-bouncer
+              readOnly: true
 
   destination:
     server: https://kubernetes.default.svc
