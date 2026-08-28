@@ -18,5 +18,10 @@ spec:
       services:
         - name: photoprism
           port: 2342
+      middlewares:
+        - name: crowdsec-bouncer
+          namespace: kube-system
+
   tls:
     certResolver: cloudflare
+
