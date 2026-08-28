@@ -28,7 +28,7 @@ spec:
         experimental:
           plugins:
             crowdsec-bouncer:
-              moduleName: "github.com/maxhere/crowdsec-bouncer-traefik-plugin"
+              moduleName: "github.com/maxlerebourg/crowdsec-bouncer-traefik-plugin"
               version: "v1.4.1"
 
         # OPTIONAL: Applies CrowdSec globally to ALL HTTPS routes on the websecure entrypoint
