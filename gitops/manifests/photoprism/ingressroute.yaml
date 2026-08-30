@@ -11,7 +11,7 @@ spec:
   entryPoints:
     - websecure
   routes:
-    - match: Host(\`photos.pearsalls.fr\`)
+    - match: Host(`photos.pearsalls.fr`)
       kind: Rule
       services:
         - name: photoprism
