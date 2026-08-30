@@ -14,3 +14,4 @@ spec:
       # replace with whatever subnet the WireGuard client pool ends up on.
       - 100.64.0.0/10
       - 10.42.0.0/16
+      - 10.100.0.0/24
