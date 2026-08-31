@@ -1,0 +1,97 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: mariadb-backup
+  namespace: glpi
+spec:
+  accessModes: ["ReadWriteOnce"]
+  storageClassName: ceph-rbd
+  resources:
+    requests:
+      storage: 2Gi
+---
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: mysqldump-backup
+  namespace: glpi
+spec:
+  # 00:30 — ahead of Velero's 01:00 daily schedule, same timing as
+  # Vaultwarden's pg_dump job, so each night's dump is on disk and gets
+  # swept into that backup rather than left for the next one.
+  schedule: "30 0 * * *"
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      backoffLimit: 2
+      template:
+        metadata:
+          labels:
+            # Deliberately NOT "app: mariadb" — see networkpolicy.yaml.
+            job: mysqldump-backup
+        spec:
+          restartPolicy: OnFailure
+          containers:
+            - name: mysqldump
+              image: mariadb:11
+              envFrom:
+                - secretRef:
+                    name: glpi-secrets
+              command:
+                - sh
+                - -c
+                - |
+                  set -e
+
+                  echo "Waiting for mariadb to accept connections..."
+                  i=0
+                  until mysqladmin ping -h mariadb -u"${MYSQL_USER}" -p"${MYSQL_PASSWORD}" --silent >/dev/null 2>&1; do
+                    i=$((i+1))
+                    if [ "$i" -ge 30 ]; then
+                      echo "ERROR: mariadb never became ready after 60s"
+                      exit 1
+                    fi
+                    echo "  not yet ($i)..."
+                    sleep 2
+                  done
+                  echo "mariadb is ready."
+
+                  STAMP=$(date +%Y%m%d-%H%M%S)
+                  RAW="/backup/glpi-${STAMP}.sql"
+                  FILE="${RAW}.gz"
+
+                  echo "Dumping to ${RAW}..."
+                  # Same reasoning as Vaultwarden's pg_dump job: write to a
+                  # plain file first so mysqldump's own exit code is what
+                  # `set -e` actually checks, not gzip's.
+                  mysqldump -h mariadb -u"${MYSQL_USER}" -p"${MYSQL_PASSWORD}" \
+                    --single-transaction --routines --triggers \
+                    "${MYSQL_DATABASE}" > "${RAW}"
+
+                  SIZE=$(wc -c < "${RAW}")
+                  if [ "${SIZE}" -lt 1024 ]; then
+                    echo "ERROR: dump is suspiciously small (${SIZE} bytes) — refusing to keep it"
+                    rm -f "${RAW}"
+                    exit 1
+                  fi
+
+                  gzip "${RAW}"
+                  echo "Dump complete: $(ls -lh ${FILE})"
+
+                  echo "Pruning dumps older than 7 days..."
+                  find /backup -name "glpi-*.sql.gz" -mtime +7 -print -delete
+              volumeMounts:
+                - name: backup
+                  mountPath: /backup
+              resources:
+                requests:
+                  cpu: 50m
+                  memory: 64Mi
+                limits:
+                  memory: 256Mi
+          volumes:
+            - name: backup
+              persistentVolumeClaim:
+                claimName: mariadb-backup

@@ -1,0 +1,17 @@
+apiVersion: traefik.io/v1alpha1
+kind: Middleware
+metadata:
+  name: glpi-admin-only
+  namespace: glpi
+spec:
+  ipAllowList:
+    sourceRange:
+      # Management VLAN (VLAN10) — same scope as the other admin-only middlewares
+      - 10.0.0.0/16
+      # Tailscale CGNAT range — drop once fully migrated off Tailscale
+      - 100.64.0.0/10
+      - 10.42.0.0/16
+      # WireGuard tunnel subnet — scope this down to specific client IPs
+      # once the VLAN30-scoping pass lands; broad /24 for now to match
+      # the other middlewares until that's done consistently everywhere.
+      - 10.100.0.0/24

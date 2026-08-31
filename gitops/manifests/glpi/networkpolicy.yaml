@@ -1,0 +1,100 @@
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: glpi-isolation
+  namespace: glpi
+spec:
+  podSelector:
+    matchLabels:
+      app: glpi
+  policyTypes:
+    - Ingress
+    - Egress
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: kube-system
+          podSelector:
+            matchLabels:
+              app.kubernetes.io/name: traefik
+      ports:
+        - protocol: TCP
+          port: 80
+    - from:
+        - ipBlock:
+            cidr: 10.0.20.0/24 # kubelet health probes
+      ports:
+        - protocol: TCP
+          port: 80
+  egress:
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: kube-system
+      ports:
+        - protocol: UDP
+          port: 53
+        - protocol: TCP
+          port: 53
+    - to:
+        - podSelector:
+            matchLabels:
+              app: mariadb
+      ports:
+        - protocol: TCP
+          port: 3306
+    # SMTP egress for ticket notifications — configured via GLPI's own
+    # web UI (Setup > Notifications > Administrative email followups),
+    # not env vars. Placeholder allows any destination on the common
+    # submission ports; tighten to your actual SMTP relay's IP once
+    # known, same as any other broad 0.0.0.0/0 rule in this repo.
+    - to:
+        - ipBlock:
+            cidr: 0.0.0.0/0
+      ports:
+        - protocol: TCP
+          port: 587
+        - protocol: TCP
+          port: 465
+        - protocol: TCP
+          port: 25
+    # GLPI's own update-check ping and marketplace plugin downloads
+    - to:
+        - ipBlock:
+            cidr: 0.0.0.0/0
+      ports:
+        - protocol: TCP
+          port: 443
+        - protocol: TCP
+          port: 80
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: mariadb-isolation
+  namespace: glpi
+spec:
+  podSelector:
+    matchLabels:
+      app: mariadb
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              app: glpi
+      ports:
+        - protocol: TCP
+          port: 3306
+    # Nightly mysqldump CronJob — dedicated label, same reasoning as
+    # Vaultwarden's postgres-backup job: never risk colliding with the
+    # "app: glpi" selector that also matches the app's own Service.
+    - from:
+        - podSelector:
+            matchLabels:
+              job: mysqldump-backup
+      ports:
+        - protocol: TCP
+          port: 3306

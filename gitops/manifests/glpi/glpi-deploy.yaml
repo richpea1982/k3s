@@ -1,0 +1,117 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: glpi-data
+  namespace: glpi
+spec:
+  accessModes: ["ReadWriteOnce"]
+  storageClassName: ceph-rbd
+  resources:
+    requests:
+      storage: 10Gi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: glpi
+  namespace: glpi
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate # single RWO Ceph RBD volume — same reasoning as
+                    # Vaultwarden/Photoprism, never two pods against it
+                    # during a rollout
+  selector:
+    matchLabels:
+      app: glpi
+  template:
+    metadata:
+      labels:
+        app: glpi
+    spec:
+      initContainers:
+        - name: wait-for-mariadb
+          image: busybox:1.36
+          command:
+            - sh
+            - -c
+            - |
+              until nc -z -w2 mariadb 3306; do
+                echo "waiting for mariadb..."
+                sleep 2
+              done
+      containers:
+        - name: glpi
+          # Official glpi/glpi image (glpi-project/docker-images),
+          # rebuilt weekly for base-OS/PHP security patches without
+          # touching the GLPI app code itself. Verify the exact tag at
+          # https://hub.docker.com/r/glpi/glpi/tags before applying —
+          # 10.0.x is the current stable line; 11.x is still beta as of
+          # this writing. Same "don't trust a version blindly" rule as
+          # Helm chart targetRevisions elsewhere in this repo.
+          image: glpi/glpi:10.0
+          ports:
+            - containerPort: 80
+          env:
+            - name: GLPI_DB_HOST
+              value: "mariadb"
+            - name: GLPI_DB_PORT
+              value: "3306"
+            - name: GLPI_CRONTAB_ENABLED
+              value: "1"
+          envFrom:
+            - secretRef:
+                # Provides GLPI_DB_NAME / GLPI_DB_USER / GLPI_DB_PASSWORD.
+                # Values must match the MYSQL_DATABASE / MYSQL_USER /
+                # MYSQL_PASSWORD keys in the same secret used by the
+                # mariadb StatefulSet. Created manually — see
+                # GLPI-README.md. Not in Git.
+                name: glpi-secrets
+          volumeMounts:
+            - name: glpi-data
+              mountPath: /var/glpi
+            # For GLPI 10.0.x the marketplace directory isn't covered by
+            # the default /var/glpi volume — uncomment if you plan to
+            # install plugins from the marketplace UI.
+            # - name: glpi-data
+            #   mountPath: /var/www/glpi/marketplace
+            #   subPath: marketplace
+          startupProbe:
+            httpGet:
+              path: /
+              port: 80
+            failureThreshold: 60 # up to 300s for first-run auto-install/schema migration
+            periodSeconds: 5
+          readinessProbe:
+            httpGet:
+              path: /
+              port: 80
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /
+              port: 80
+            periodSeconds: 15
+          resources:
+            requests:
+              cpu: 200m
+              memory: 512Mi
+            limits:
+              cpu: "1000m"
+              memory: 1Gi
+      volumes:
+        - name: glpi-data
+          persistentVolumeClaim:
+            claimName: glpi-data
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: glpi
+  namespace: glpi
+spec:
+  selector:
+    app: glpi
+  ports:
+    - port: 80
+      targetPort: 80
