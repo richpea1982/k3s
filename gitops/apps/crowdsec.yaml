@@ -18,7 +18,7 @@ spec:
             - name: PARSERS
               value: "crowdsecurity/cri-logs"
           acquisition: []
-          additionalAcquisitions:
+          additionalAcquisition:
             - filenames:
                 - /var/log/containers/traefik-*_kube-system_traefik-*.log
               type: cri-logs
