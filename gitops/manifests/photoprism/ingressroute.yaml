@@ -22,4 +22,5 @@ spec:
         - name: photoprism-admin-only
           namespace: photoprism
   tls:
-    secretName: photos-pearsalls-fr-tls
+#    secretName: photos-pearsalls-fr-tls
+    certResolver: cloudflare
