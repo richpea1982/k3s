@@ -11,6 +11,8 @@ spec:
       kind: Rule
       middlewares:
         - name: argocd-admin-only
+        - name: crowdsec-bouncer
+          namespace: kube-system
       services:
         # Port 80 — argocd-server is running with server.insecure: true,
         # same as vaultwarden's backend; Traefik terminates TLS.
