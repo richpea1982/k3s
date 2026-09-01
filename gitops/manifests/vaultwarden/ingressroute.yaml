@@ -21,5 +21,10 @@ spec:
       services:
         - name: vaultwarden
           port: 80
+      middlewares:
+        - name: crowdsec-bouncer
+          namespace: kube-system
+        - name: vaultwarden-admin-only
+          namespace: vaultwarden
   tls:
     certResolver: cloudflare
