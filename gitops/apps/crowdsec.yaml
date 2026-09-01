@@ -18,9 +18,11 @@ spec:
             - name: PARSERS
               value: "crowdsecurity/cri-logs"
           acquisition:
-            - namespace: kube-system
-              podName: traefik-*
-              program: traefik
+            - filenames:
+                - /var/log/containers/traefik-*_kube-system_traefik-*.log
+              type: cri-logs
+              labels:
+                type: traefik
               poll_without_inotify: true
   destination:
     server: https://kubernetes.default.svc
