@@ -13,14 +13,14 @@ spec:
   routes:
     - match: Host(`photos.pearsalls.fr`)
       kind: Rule
-      services:
-        - name: photoprism
-          port: 2342
       middlewares:
         - name: crowdsec-bouncer
           namespace: kube-system
         - name: photoprism-admin-only
           namespace: photoprism
+      services:
+        - name: photoprism
+          port: 2342
   tls:
 #    secretName: photos-pearsalls-fr-tls
     certResolver: cloudflare
