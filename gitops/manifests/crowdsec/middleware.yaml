@@ -7,8 +7,8 @@ spec:
   plugin:
     crowdsec-bouncer:
       enabled: true
-      crowdsecLapiScheme: "http"
+      crowdsecMode: stream
+      crowdsecLapiScheme: http
       crowdsecLapiHost: "crowdsec-service.kube-system.svc.cluster.local:8080"
+      crowdsecLapiKeyFile: /etc/crowdsec-bouncer/key
       secretName: "crowdsec-traefik-bouncer-key"
-      crowdsecLapiKeySecretVariable: "crowdsec-lapi-key"
-      crowdsecMode: "stream"
