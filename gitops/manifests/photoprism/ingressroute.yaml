@@ -14,9 +14,8 @@ spec:
     - match: Host(`photos.pearsalls.fr`)
       kind: Rule
       middlewares:
-        - name: crowdsec-bouncer
-          namespace: kube-system
         - name: photoprism-admin-only
+        - name: crowdsec-bouncer
           namespace: photoprism
       services:
         - name: photoprism
