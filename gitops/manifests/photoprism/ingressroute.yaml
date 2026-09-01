@@ -16,7 +16,7 @@ spec:
       middlewares:
         - name: photoprism-admin-only
         - name: crowdsec-bouncer
-          namespace: photoprism
+          namespace: kube-system
       services:
         - name: photoprism
           port: 2342
