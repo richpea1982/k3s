@@ -21,7 +21,7 @@ spec:
           additionalAcquisition:
             - source: file
               filenames:
-                - /var/log/containers/traefik-*_kube-system_traefik-*.log
+                - /var/log/containers/traefik-*_kube-system_*.log
               labels:
                 type: containerd
                 program: traefik
