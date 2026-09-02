@@ -23,7 +23,7 @@ spec:
               filenames:
                 - /var/log/containers/traefik-*_kube-system_traefik-*.log
               labels:
-                type: traefik
+                type: containerd
                 program: traefik
               poll_without_inotify: true
         config:
