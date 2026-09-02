@@ -24,6 +24,7 @@ spec:
                 - /var/log/containers/traefik-*_kube-system_traefik-*.log
               labels:
                 type: traefik
+                program: traefik
               poll_without_inotify: true
   destination:
     server: https://kubernetes.default.svc
