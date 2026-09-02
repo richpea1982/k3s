@@ -26,6 +26,16 @@ spec:
                 type: traefik
                 program: traefik
               poll_without_inotify: true
+        config:
+          parsers:
+            s00-raw:
+              promote-program-label.yaml: |
+                name: local/promote-program-label
+                description: "Promote the acquisition 'program' label into evt.Parsed.program (traefik-logs v1.5 file-source bug workaround)"
+                filter: "evt.Line.Labels.program != nil && evt.Line.Labels.program != ''"
+                statics:
+                  - parsed: program
+                    expression: "evt.Line.Labels.program" 
   destination:
     server: https://kubernetes.default.svc
     namespace: kube-system
