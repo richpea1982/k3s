@@ -35,7 +35,7 @@ spec:
                 filter: "evt.Line.Labels.program != nil && evt.Line.Labels.program != ''"
                 statics:
                   - parsed: program
-                    expression: "evt.Line.Labels.program" 
+                    expression: "evt.Line.Labels.program"
   destination:
     server: https://kubernetes.default.svc
     namespace: kube-system
