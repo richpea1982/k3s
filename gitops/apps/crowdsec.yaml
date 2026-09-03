@@ -14,7 +14,7 @@ spec:
         agent:
           env:
             - name: COLLECTIONS
-              value: "crowdsecurity/traefik crowdsecurity/linux"
+              value: "crowdsecurity/traefik crowdsecurity/linux crowdsecurity/base-http-scenarios"
             - name: PARSERS
               value: "crowdsecurity/cri-logs"
           acquisition: []
