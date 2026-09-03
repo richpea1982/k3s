@@ -50,6 +50,9 @@ spec:
           - "--certificatesresolvers.cloudflare.acme.dnschallenge=true"
           - "--certificatesresolvers.cloudflare.acme.dnschallenge.provider=cloudflare"
           - "--certificatesresolvers.cloudflare.acme.dnschallenge.resolvers=1.1.1.1:53,8.8.8.8:53"
+          - "--entrypoints.web.forwardedHeaders.trustedIPs=10.42.0.0/16"
+          - "--entrypoints.websecure.forwardedHeaders.trustedIPs=10.42.0.0/16"
+          - "--certificatesresolvers.cloudflare.acme.email=rpearsall1982@gmail.com"
         envFrom:
           - secretRef:
               name: traefik-cloudflare-dns-token
