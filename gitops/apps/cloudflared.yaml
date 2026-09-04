@@ -6,7 +6,7 @@ metadata:
 spec:
   project: default
   source:
-    repoURL: https://github.com/richpea1982/k3s
+    repoURL: git@github.com:richpea1982/k3s.git
     targetRevision: HEAD
     path: gitops/manifests/cloudflared
   destination:

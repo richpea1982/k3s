@@ -9,6 +9,9 @@ spec:
   routes:
     - match: Host(`richard.pearsalls.fr`)
       kind: Rule
+      middlewares:
+        - name: crowdsec-bouncer
+          namespace: kube-system
       services:
         - name: portfolio
           port: 80
