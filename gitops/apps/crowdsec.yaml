@@ -14,7 +14,7 @@ spec:
         agent:
           env:
             - name: COLLECTIONS
-              value: "crowdsecurity/traefik crowdsecurity/linux crowdsecurity/base-http-scenarios"
+              value: "crowdsecurity/traefik crowdsecurity/linux"
             - name: PARSERS
               value: "crowdsecurity/cri-logs"
           acquisition: []
@@ -26,6 +26,19 @@ spec:
                 type: containerd
                 program: traefik
               poll_without_inotify: true
+          metrics:
+            enabled: true
+            serviceMonitor:
+              enabled: true
+              additionalLabels:
+                release: prometheus-stack
+        lapi:
+          metrics:
+            enabled: true
+            serviceMonitor:
+              enabled: true
+              additionalLabels:
+                release: prometheus-stack
         config:
           parsers:
             s00-raw:
@@ -36,20 +49,6 @@ spec:
                 statics:
                   - parsed: program
                     expression: "evt.Line.Labels.program"
-        lapi:
-          metrics:
-            enabled: true
-            serviceMonitor:
-              enabled: true
-              additionalLabels:
-                release: prometheus-stack
-        agent:
-          metrics:
-            enabled: true
-            serviceMonitor:
-              enabled: true
-              additionalLabels:
-                release: prometheus-stack
   destination:
     server: https://kubernetes.default.svc
     namespace: kube-system
