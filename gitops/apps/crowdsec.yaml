@@ -36,6 +36,20 @@ spec:
                 statics:
                   - parsed: program
                     expression: "evt.Line.Labels.program"
+        lapi:
+          metrics:
+            enabled: true
+            serviceMonitor:
+              enabled: true
+              additionalLabels:
+                release: prometheus-stack
+        agent:
+          metrics:
+            enabled: true
+            serviceMonitor:
+              enabled: true
+              additionalLabels:
+                release: prometheus-stack
   destination:
     server: https://kubernetes.default.svc
     namespace: kube-system
