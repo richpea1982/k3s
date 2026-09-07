@@ -1,0 +1,20 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: redirect-eglise
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/richpea1982/k3s
+    targetRevision: HEAD
+    path: gitops/manifests/redirect-eglise
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: redirect-eglise
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true

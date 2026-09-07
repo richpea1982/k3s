@@ -1,0 +1,38 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: redirect-eglise
+  namespace: redirect-eglise
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: redirect-eglise
+  template:
+    metadata:
+      labels:
+        app: redirect-eglise
+    spec:
+      containers:
+        - name: whoami
+          # Dummy backend — the redirect middleware fires before Traefik
+          # ever forwards a request here. Same trick as the old
+          # docker-compose config.
+          image: traefik/whoami:latest
+          ports:
+            - containerPort: 80
+          resources:
+            requests: { cpu: 10m, memory: 16Mi }
+            limits: { memory: 32Mi }
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: redirect-eglise
+  namespace: redirect-eglise
+spec:
+  selector:
+    app: redirect-eglise
+  ports:
+    - port: 80
+      targetPort: 80

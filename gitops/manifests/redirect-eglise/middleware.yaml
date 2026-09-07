@@ -1,0 +1,10 @@
+apiVersion: traefik.io/v1alpha1
+kind: Middleware
+metadata:
+  name: eglise-redirect
+  namespace: redirect-eglise
+spec:
+  redirectRegex:
+    regex: "^https?://(www\\.)?egliseesperanceagde\\.fr(.*)$"
+    replacement: "https://epagde.wixsite.com/esperance34${2}"
+    permanent: true
