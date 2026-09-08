@@ -21,6 +21,12 @@ spec:
       ports:
         - protocol: TCP
           port: 8082
+    # seahub talks to seafile-server on two ports: 8082 (fileserver,
+    # also reached via Traefik above) and 8001 — a socat-bridged RPC
+    # channel seahub uses for admin-user creation and other backend
+    # calls. Missing this port-8001 rule is what caused
+    # "Failed to establish socat bridge with seafile-server on port
+    # 8001. Terminating..." — Calico was silently dropping it.
     - from:
         - podSelector:
             matchLabels:
@@ -28,6 +34,8 @@ spec:
       ports:
         - protocol: TCP
           port: 8082
+        - protocol: TCP
+          port: 8001
     - from:
         - ipBlock:
             cidr: 10.0.20.0/24 # kubelet health probes
@@ -117,6 +125,8 @@ spec:
       ports:
         - protocol: TCP
           port: 11211
+    # See the matching comment in seafile-server-isolation above — 8082
+    # for fileserver calls, 8001 for the socat-bridged RPC channel.
     - to:
         - podSelector:
             matchLabels:
@@ -124,6 +134,8 @@ spec:
       ports:
         - protocol: TCP
           port: 8082
+        - protocol: TCP
+          port: 8001
     - to:
         - ipBlock:
             cidr: 10.0.10.15/32
