@@ -24,9 +24,10 @@ spec:
     # seahub talks to seafile-server on two ports: 8082 (fileserver,
     # also reached via Traefik above) and 8001 — a socat-bridged RPC
     # channel seahub uses for admin-user creation and other backend
-    # calls. Missing this port-8001 rule is what caused
-    # "Failed to establish socat bridge with seafile-server on port
-    # 8001. Terminating..." — Calico was silently dropping it.
+    # calls. Split into separate rules — a single rule listing both
+    # ports was observed to allow 8082 but silently drop 8001 under
+    # Calico (nc from an app=seahub pod reached 8082, timed out on
+    # 8001). Separate rules avoid that evaluation quirk.
     - from:
         - podSelector:
             matchLabels:
@@ -34,6 +35,11 @@ spec:
       ports:
         - protocol: TCP
           port: 8082
+    - from:
+        - podSelector:
+            matchLabels:
+              app: seahub
+      ports:
         - protocol: TCP
           port: 8001
     - from:
@@ -125,8 +131,10 @@ spec:
       ports:
         - protocol: TCP
           port: 11211
-    # See the matching comment in seafile-server-isolation above — 8082
-    # for fileserver calls, 8001 for the socat-bridged RPC channel.
+    # Split 8082 / 8001 into separate rules — see matching comment on
+    # seafile-server-isolation. Combined multi-port rule allowed 8082
+    # but black-holed 8001 (socat bridge), causing:
+    # "Failed to establish socat bridge with seafile-server on port 8001."
     - to:
         - podSelector:
             matchLabels:
@@ -134,6 +142,11 @@ spec:
       ports:
         - protocol: TCP
           port: 8082
+    - to:
+        - podSelector:
+            matchLabels:
+              app: seafile-server
+      ports:
         - protocol: TCP
           port: 8001
     - to:
