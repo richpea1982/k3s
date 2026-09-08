@@ -82,7 +82,9 @@ spec:
   selector:
     app: seafile-server
   ports:
-    - port: 8082
+    - name: fileserver
+      port: 8082
       targetPort: 8082
-    - port: 8001
+    - name: rpc
+      port: 8001
       targetPort: 8001
