@@ -38,7 +38,6 @@ spec:
           image: ggogel/seafile-server:11.0.13
           ports:
             - containerPort: 8082
-            - containerPort: 8000
           env:
             - name: DB_HOST
               value: "mariadb"
@@ -98,5 +97,3 @@ spec:
   ports:
     - port: 8082
       targetPort: 8082
-    - port: 8000
-      targetPort: 8000
