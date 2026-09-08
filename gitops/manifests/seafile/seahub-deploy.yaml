@@ -32,8 +32,8 @@ spec:
             - sh
             - -c
             - |
-              until [ -d /shared/seafile/seafile-server-11.0.13 ] || [ -d /shared/seafile-server-latest ]; do
-                echo "waiting for seafile-server files..."
+              until nc -z -w2 seafile-server 8082; do
+                echo "waiting for seafile-server..."
                 sleep 2
               done
           volumeMounts:
