@@ -32,13 +32,10 @@ spec:
             - sh
             - -c
             - |
-              until [ -d /shared/seafile-server-latest ]; do
-                echo "waiting for seafile-server to populate shared folder and create seafile-server-latest..."
+              until nc -z -w2 seafile-server 8082; do
+                echo "waiting for seafile-server (needs to have written shared config first)..."
                 sleep 2
               done
-          volumeMounts:
-            - name: seafile-data
-              mountPath: /shared
       containers:
         - name: seahub
           image: ggogel/seahub:11.0.13
