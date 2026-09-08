@@ -36,6 +36,12 @@ spec:
                 echo "waiting for seafile-server..."
                 sleep 2
               done
+        - name: clean-stale-socket
+          image: busybox:1.36
+          command:
+            - sh
+            - -c
+            - rm -f /shared/seafile.sock /shared/seafile/seafile.sock
           volumeMounts:
             - name: seafile-data
               mountPath: /shared
