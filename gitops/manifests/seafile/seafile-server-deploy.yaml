@@ -6,10 +6,7 @@ metadata:
 spec:
   replicas: 1
   strategy:
-    type: Recreate # single RWX-but-effectively-single-writer app against
-                    # seafile-data; same rolling-update deadlock class as
-                    # Vaultwarden/Photoprism/Traefik if a second replica
-                    # is ever pointed at the same PVC.
+    type: Recreate
   selector:
     matchLabels:
       app: seafile-server
@@ -31,23 +28,16 @@ spec:
               done
       containers:
         - name: seafile-server
-          # Pin verified against ggogel/seafile-server's Docker Hub tags
-          # before first sync — this matches what their master-branch
-          # compose file currently references, not necessarily their
-          # latest published tag.
           image: ggogel/seafile-server:11.0.13
           ports:
             - containerPort: 8082
-            - containerPort: 8000
+            - containerPort: 8001
           env:
             - name: DB_HOST
               value: "mariadb"
             - name: DB_ROOT_PASSWD
               valueFrom:
                 secretKeyRef:
-                  # Must equal mariadb's MYSQL_ROOT_PASSWORD exactly —
-                  # same secret/key, referenced from both places, so
-                  # there's no risk of the two drifting apart.
                   name: seafile-secrets
                   key: mysql-root-password
             - name: TIME_ZONE
@@ -55,10 +45,6 @@ spec:
             - name: HTTPS
               value: "true"
             - name: SEAFILE_URL
-              # Mandatory on first deployment only — per ggogel's own
-              # docs, changing this later has no effect because it gets
-              # written into the database. Change via the System Admin
-              # web UI post-install instead. See SEAFILE-README.md.
               value: "seafile.pearsalls.fr"
           volumeMounts:
             - name: seafile-data
@@ -66,7 +52,7 @@ spec:
           startupProbe:
             tcpSocket:
               port: 8082
-            failureThreshold: 60 # up to ~300s for first-boot ccnet/seafile config generation
+            failureThreshold: 60
             periodSeconds: 5
           readinessProbe:
             tcpSocket:
@@ -98,5 +84,5 @@ spec:
   ports:
     - port: 8082
       targetPort: 8082
-    - port: 8000
-      targetPort: 8000
+    - port: 8001
+      targetPort: 8001
