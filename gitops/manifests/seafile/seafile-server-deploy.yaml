@@ -1,0 +1,99 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: seafile-server
+  namespace: seafile
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate # single RWX-but-effectively-single-writer app against
+                    # seafile-data; same rolling-update deadlock class as
+                    # Vaultwarden/Photoprism/Traefik if a second replica
+                    # is ever pointed at the same PVC.
+  selector:
+    matchLabels:
+      app: seafile-server
+  template:
+    metadata:
+      labels:
+        app: seafile-server
+    spec:
+      initContainers:
+        - name: wait-for-mariadb
+          image: busybox:1.36
+          command:
+            - sh
+            - -c
+            - |
+              until nc -z -w2 mariadb 3306; do
+                echo "waiting for mariadb..."
+                sleep 2
+              done
+      containers:
+        - name: seafile-server
+          # Pin verified against ggogel/seafile-server's Docker Hub tags
+          # before first sync — this matches what their master-branch
+          # compose file currently references, not necessarily their
+          # latest published tag.
+          image: ggogel/seafile-server:11.0.13
+          ports:
+            - containerPort: 8082
+          env:
+            - name: DB_HOST
+              value: "mariadb"
+            - name: DB_ROOT_PASSWD
+              valueFrom:
+                secretKeyRef:
+                  # Must equal mariadb's MYSQL_ROOT_PASSWORD exactly —
+                  # same secret/key, referenced from both places, so
+                  # there's no risk of the two drifting apart.
+                  name: seafile-secrets
+                  key: mysql-root-password
+            - name: TIME_ZONE
+              value: "Europe/Paris"
+            - name: HTTPS
+              value: "true"
+            - name: SEAFILE_URL
+              # Mandatory on first deployment only — per ggogel's own
+              # docs, changing this later has no effect because it gets
+              # written into the database. Change via the System Admin
+              # web UI post-install instead. See SEAFILE-README.md.
+              value: "seafile.pearsalls.fr"
+          volumeMounts:
+            - name: seafile-data
+              mountPath: /shared
+          startupProbe:
+            tcpSocket:
+              port: 8082
+            failureThreshold: 60 # up to ~300s for first-boot ccnet/seafile config generation
+            periodSeconds: 5
+          readinessProbe:
+            tcpSocket:
+              port: 8082
+            periodSeconds: 10
+          livenessProbe:
+            tcpSocket:
+              port: 8082
+            periodSeconds: 15
+          resources:
+            requests:
+              cpu: 200m
+              memory: 512Mi
+            limits:
+              memory: 1536Mi
+      volumes:
+        - name: seafile-data
+          persistentVolumeClaim:
+            claimName: seafile-data
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: seafile-server
+  namespace: seafile
+spec:
+  selector:
+    app: seafile-server
+  ports:
+    - port: 8082
+      targetPort: 8082

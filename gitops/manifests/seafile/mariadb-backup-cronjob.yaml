@@ -1,0 +1,107 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: mariadb-backup
+  namespace: seafile
+spec:
+  accessModes: ["ReadWriteOnce"]
+  storageClassName: ceph-rbd
+  resources:
+    requests:
+      storage: 5Gi
+---
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: mariadb-backup
+  namespace: seafile
+spec:
+  # 00:15 — ahead of both Vaultwarden's postgres-backup (00:30) and
+  # Velero's daily 01:00 run, so this night's dump is on disk and gets
+  # swept into that backup rather than left for the following night.
+  schedule: "15 0 * * *"
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      backoffLimit: 2
+      template:
+        metadata:
+          labels:
+            # Deliberately NOT "app: mariadb" — that label also matches
+            # the mariadb Service's selector (headless, but still a
+            # selector match), which would make this pod a valid target
+            # for any future service traffic for however long each run
+            # lasts. Dedicated label + dedicated NetworkPolicy rule
+            # instead — see networkpolicy.yaml.
+            job: mariadb-backup
+        spec:
+          restartPolicy: OnFailure
+          containers:
+            - name: mysqldump
+              image: mariadb:10.11.10
+              env:
+                - name: MYSQL_ROOT_PASSWORD
+                  valueFrom:
+                    secretKeyRef:
+                      name: seafile-secrets
+                      key: mysql-root-password
+              command:
+                - sh
+                - -c
+                - |
+                  set -e
+
+                  echo "Waiting for mariadb to accept connections..."
+                  i=0
+                  until mariadb-admin ping -h mariadb -uroot -p"${MYSQL_ROOT_PASSWORD}" --silent >/dev/null 2>&1; do
+                    i=$((i+1))
+                    if [ "$i" -ge 30 ]; then
+                      echo "ERROR: mariadb never became ready after 60s"
+                      exit 1
+                    fi
+                    echo "  not yet ($i)..."
+                    sleep 2
+                  done
+                  echo "mariadb is ready."
+
+                  STAMP=$(date +%Y%m%d-%H%M%S)
+                  RAW="/backup/seafile-${STAMP}.sql"
+                  FILE="${RAW}.gz"
+
+                  # --all-databases: ggogel's images create ccnet_db,
+                  # seafile_db, and seahub_db under the same root
+                  # credentials with no fixed, documented name list
+                  # guaranteed stable across versions — dumping
+                  # everything is the safe default here, unlike
+                  # Vaultwarden/GLPI's single named database.
+                  echo "Dumping all databases to ${RAW}..."
+                  mariadb-dump -h mariadb -uroot -p"${MYSQL_ROOT_PASSWORD}" \
+                    --all-databases --single-transaction --quick > "${RAW}"
+
+                  SIZE=$(wc -c < "${RAW}")
+                  if [ "${SIZE}" -lt 4096 ]; then
+                    echo "ERROR: dump is suspiciously small (${SIZE} bytes) — refusing to keep it"
+                    rm -f "${RAW}"
+                    exit 1
+                  fi
+
+                  gzip "${RAW}"
+                  echo "Dump complete: $(ls -lh ${FILE})"
+
+                  echo "Pruning dumps older than 7 days..."
+                  find /backup -name "seafile-*.sql.gz" -mtime +7 -print -delete
+              volumeMounts:
+                - name: backup
+                  mountPath: /backup
+              resources:
+                requests:
+                  cpu: 50m
+                  memory: 64Mi
+                limits:
+                  memory: 256Mi
+          volumes:
+            - name: backup
+              persistentVolumeClaim:
+                claimName: mariadb-backup

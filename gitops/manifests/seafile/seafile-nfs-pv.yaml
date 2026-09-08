@@ -1,0 +1,103 @@
+# Same static-PV pattern as photoprism-nfs-pv.yaml — no dynamic NFS
+# provisioner in this cluster, so these point straight at the existing
+# NAS export (storage_pool/seafile, now NFS-exported to VLAN20 — see
+# the nas_setup role change) with subdirectories pre-created by that
+# same Ansible change (data / avatars / custom).
+#
+# All three need ReadWriteMany: seafile-data is shared by seafile-server
+# AND seahub simultaneously; seahub-avatars and seahub-custom are
+# written by seahub and read by seahub-media at the same time. This is
+# exactly the access pattern ggogel's own Kubernetes wiki page flags —
+# their upstream manifests use RWX PVCs for the same reason.
+
+# --- seafile-data: the big one — library blocks, ccnet/seafile config, logs ---
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: seafile-data-pv
+spec:
+  capacity:
+    storage: 200Gi # nominal — NFS doesn't hard-enforce this, informational only
+  accessModes:
+    - ReadWriteMany
+  nfs:
+    server: 10.0.10.15
+    path: /mnt/storage/seafile/data
+  persistentVolumeReclaimPolicy: Retain
+  storageClassName: ""
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: seafile-data
+  namespace: seafile
+spec:
+  accessModes:
+    - ReadWriteMany
+  storageClassName: ""
+  resources:
+    requests:
+      storage: 200Gi
+  volumeName: seafile-data-pv
+
+---
+# --- seahub-avatars: user avatar images ---
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: seahub-avatars-pv
+spec:
+  capacity:
+    storage: 5Gi
+  accessModes:
+    - ReadWriteMany
+  nfs:
+    server: 10.0.10.15
+    path: /mnt/storage/seafile/avatars
+  persistentVolumeReclaimPolicy: Retain
+  storageClassName: ""
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: seahub-avatars
+  namespace: seafile
+spec:
+  accessModes:
+    - ReadWriteMany
+  storageClassName: ""
+  resources:
+    requests:
+      storage: 5Gi
+  volumeName: seahub-avatars-pv
+
+---
+# --- seahub-custom: custom logos ---
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: seahub-custom-pv
+spec:
+  capacity:
+    storage: 2Gi
+  accessModes:
+    - ReadWriteMany
+  nfs:
+    server: 10.0.10.15
+    path: /mnt/storage/seafile/custom
+  persistentVolumeReclaimPolicy: Retain
+  storageClassName: ""
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: seahub-custom
+  namespace: seafile
+spec:
+  accessModes:
+    - ReadWriteMany
+  storageClassName: ""
+  resources:
+    requests:
+      storage: 2Gi
+  volumeName: seahub-custom-pv

@@ -1,0 +1,27 @@
+apiVersion: traefik.io/v1alpha1
+kind: Middleware
+metadata:
+  name: seafile-admin-only
+  namespace: seafile
+spec:
+  ipAllowList:
+    sourceRange:
+      # Management VLAN (VLAN10) — same scope as photoprism-admin-only / grafana-admin-only
+      - 10.0.0.0/16
+      # Tailscale CGNAT range — replace with the WireGuard client subnet once that migration lands
+      - 100.64.0.0/10
+      - 10.42.0.0/16
+      - 10.100.0.0/24
+---
+# seafile-caddy (the piece we're replacing) does this exact strip before
+# forwarding to seafile-server — without it, seafile-server sees
+# /seafhttp/... instead of /... and every sync client request 404s.
+apiVersion: traefik.io/v1alpha1
+kind: Middleware
+metadata:
+  name: seafile-strip-seafhttp
+  namespace: seafile
+spec:
+  stripPrefix:
+    prefixes:
+      - /seafhttp

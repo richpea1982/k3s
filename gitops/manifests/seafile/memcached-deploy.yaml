@@ -1,0 +1,41 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: memcached
+  namespace: seafile
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: memcached
+  template:
+    metadata:
+      labels:
+        app: memcached
+    spec:
+      containers:
+        - name: memcached
+          image: memcached:1.6.34
+          args: ["-m", "1024"] # matches ggogel's compose entrypoint override
+          ports:
+            - containerPort: 11211
+          resources:
+            requests:
+              cpu: 20m
+              memory: 128Mi
+            limits:
+              memory: 1200Mi # -m 1024 is memcached's own cache-size cap;
+                              # give the container itself a bit of headroom
+                              # above that for process overhead.
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: memcached
+  namespace: seafile
+spec:
+  selector:
+    app: memcached
+  ports:
+    - port: 11211
+      targetPort: 11211

@@ -1,0 +1,219 @@
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: seafile-server-isolation
+  namespace: seafile
+spec:
+  podSelector:
+    matchLabels:
+      app: seafile-server
+  policyTypes:
+    - Ingress
+    - Egress
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: kube-system
+          podSelector:
+            matchLabels:
+              app.kubernetes.io/name: traefik
+      ports:
+        - protocol: TCP
+          port: 8082
+    - from:
+        - podSelector:
+            matchLabels:
+              app: seahub
+      ports:
+        - protocol: TCP
+          port: 8082
+    - from:
+        - ipBlock:
+            cidr: 10.0.20.0/24 # kubelet health probes
+      ports:
+        - protocol: TCP
+          port: 8082
+  egress:
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: kube-system
+      ports:
+        - protocol: UDP
+          port: 53
+        - protocol: TCP
+          port: 53
+    - to:
+        - podSelector:
+            matchLabels:
+              app: mariadb
+      ports:
+        - protocol: TCP
+          port: 3306
+    # NFS to the NAS — same pattern as photoprism-isolation, see that
+    # manifest's comment: this rule may be redundant with how the CNI
+    # actually routes kubelet-mounted NFS traffic, kept for consistency
+    # with existing precedent in this repo rather than removed.
+    - to:
+        - ipBlock:
+            cidr: 10.0.10.15/32
+      ports:
+        - protocol: TCP
+          port: 2049
+        - protocol: UDP
+          port: 2049
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: seahub-isolation
+  namespace: seafile
+spec:
+  podSelector:
+    matchLabels:
+      app: seahub
+  policyTypes:
+    - Ingress
+    - Egress
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: kube-system
+          podSelector:
+            matchLabels:
+              app.kubernetes.io/name: traefik
+      ports:
+        - protocol: TCP
+          port: 8000
+    - from:
+        - ipBlock:
+            cidr: 10.0.20.0/24 # kubelet health probes
+      ports:
+        - protocol: TCP
+          port: 8000
+  egress:
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: kube-system
+      ports:
+        - protocol: UDP
+          port: 53
+        - protocol: TCP
+          port: 53
+    - to:
+        - podSelector:
+            matchLabels:
+              app: mariadb
+      ports:
+        - protocol: TCP
+          port: 3306
+    - to:
+        - podSelector:
+            matchLabels:
+              app: memcached
+      ports:
+        - protocol: TCP
+          port: 11211
+    - to:
+        - podSelector:
+            matchLabels:
+              app: seafile-server
+      ports:
+        - protocol: TCP
+          port: 8082
+    - to:
+        - ipBlock:
+            cidr: 10.0.10.15/32
+      ports:
+        - protocol: TCP
+          port: 2049
+        - protocol: UDP
+          port: 2049
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: seahub-media-isolation
+  namespace: seafile
+spec:
+  podSelector:
+    matchLabels:
+      app: seahub-media
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: kube-system
+          podSelector:
+            matchLabels:
+              app.kubernetes.io/name: traefik
+      ports:
+        - protocol: TCP
+          port: 80
+    - from:
+        - ipBlock:
+            cidr: 10.0.20.0/24 # kubelet health probes
+      ports:
+        - protocol: TCP
+          port: 80
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: mariadb-isolation
+  namespace: seafile
+spec:
+  podSelector:
+    matchLabels:
+      app: mariadb
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              app: seafile-server
+      ports:
+        - protocol: TCP
+          port: 3306
+    - from:
+        - podSelector:
+            matchLabels:
+              app: seahub
+      ports:
+        - protocol: TCP
+          port: 3306
+    # Nightly mysqldump CronJob — dedicated label, not "app: mariadb",
+    # same reasoning as vaultwarden's postgres-backup rule.
+    - from:
+        - podSelector:
+            matchLabels:
+              job: mariadb-backup
+      ports:
+        - protocol: TCP
+          port: 3306
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: memcached-isolation
+  namespace: seafile
+spec:
+  podSelector:
+    matchLabels:
+      app: memcached
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              app: seahub
+      ports:
+        - protocol: TCP
+          port: 11211

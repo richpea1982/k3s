@@ -1,0 +1,64 @@
+# Serves /media/avatars and /media/custom directly — Traefik routes
+# those two paths straight here instead of to seahub, matching the split
+# seafile-caddy performs upstream. Mounted read-only: this container
+# only ever serves what seahub has already written.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: seahub-media
+  namespace: seafile
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: seahub-media
+  template:
+    metadata:
+      labels:
+        app: seahub-media
+    spec:
+      containers:
+        - name: seahub-media
+          image: ggogel/seahub-media:11.0.13
+          ports:
+            - containerPort: 80
+          volumeMounts:
+            - name: seahub-avatars
+              mountPath: /usr/share/caddy/media/avatars
+              readOnly: true
+            - name: seahub-custom
+              mountPath: /usr/share/caddy/media/custom
+              readOnly: true
+          readinessProbe:
+            tcpSocket:
+              port: 80
+            periodSeconds: 10
+          livenessProbe:
+            tcpSocket:
+              port: 80
+            periodSeconds: 15
+          resources:
+            requests:
+              cpu: 20m
+              memory: 32Mi
+            limits:
+              memory: 128Mi
+      volumes:
+        - name: seahub-avatars
+          persistentVolumeClaim:
+            claimName: seahub-avatars
+        - name: seahub-custom
+          persistentVolumeClaim:
+            claimName: seahub-custom
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: seahub-media
+  namespace: seafile
+spec:
+  selector:
+    app: seahub-media
+  ports:
+    - port: 80
+      targetPort: 80

@@ -1,0 +1,52 @@
+# Internal-only, same pattern as vault.pearsalls.fr / photos.pearsalls.fr:
+# a real subdomain (needed for Let's Encrypt DNS-01) with no public
+# A/CNAME record — resolve manually via /etc/hosts on admin/client
+# devices pointing at a K3s node IP, or via WireGuard once that
+# migration lands, until Unbound split-horizon DNS is live.
+#
+# Explicit priority on the two path-specific routes: Traefik does not
+# reliably auto-prioritize PathPrefix specificity over a bare Host()
+# match across separate IngressRoute route entries, so this pins it
+# rather than hoping default ordering behaves.
+apiVersion: traefik.io/v1alpha1
+kind: IngressRoute
+metadata:
+  name: seafile
+  namespace: seafile
+spec:
+  entryPoints:
+    - websecure
+  routes:
+    - match: Host(`seafile.pearsalls.fr`) && PathPrefix(`/seafhttp`)
+      kind: Rule
+      priority: 20
+      middlewares:
+        - name: seafile-admin-only
+        - name: seafile-strip-seafhttp
+        - name: crowdsec-bouncer
+          namespace: kube-system
+      services:
+        - name: seafile-server
+          port: 8082
+    - match: Host(`seafile.pearsalls.fr`) && PathPrefix(`/media`)
+      kind: Rule
+      priority: 20
+      middlewares:
+        - name: seafile-admin-only
+        - name: crowdsec-bouncer
+          namespace: kube-system
+      services:
+        - name: seahub-media
+          port: 80
+    - match: Host(`seafile.pearsalls.fr`)
+      kind: Rule
+      priority: 1
+      middlewares:
+        - name: seafile-admin-only
+        - name: crowdsec-bouncer
+          namespace: kube-system
+      services:
+        - name: seahub
+          port: 8000
+  tls:
+    certResolver: cloudflare

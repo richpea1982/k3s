@@ -1,0 +1,110 @@
+# Same reasoning as Postgres for Vaultwarden and MariaDB for Photoprism:
+# a live RDBMS needs a real block device for WAL/redo-log fsync
+# guarantees, not NFS. seafile-server and seahub both talk to this
+# directly as MYSQL root (ggogel's images create their own service
+# databases/users on first boot — there is no separate scoped DB user
+# in this design, matching their published compose file exactly).
+#
+# Pinned to mariadb:10.11.10, not the mariadb:11 used for Photoprism's
+# StatefulSet elsewhere in this repo — this is the exact version
+# ggogel/seafile-containerized validates its images against upstream.
+# Bumping this independently of their tested combination is an
+# unforced risk; revisit only alongside a deliberate seafile-server/
+# seahub image version bump, not on its own.
+apiVersion: v1
+kind: Service
+metadata:
+  name: mariadb
+  namespace: seafile
+spec:
+  clusterIP: None
+  selector:
+    app: mariadb
+  ports:
+    - port: 3306
+      targetPort: 3306
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: mariadb
+  namespace: seafile
+spec:
+  serviceName: mariadb
+  replicas: 1
+  selector:
+    matchLabels:
+      app: mariadb
+  template:
+    metadata:
+      labels:
+        app: mariadb
+    spec:
+      containers:
+        - name: mariadb
+          image: mariadb:10.11.10
+          ports:
+            - containerPort: 3306
+          env:
+            - name: MYSQL_LOG_CONSOLE
+              value: "true"
+            - name: MARIADB_AUTO_UPGRADE
+              value: "true"
+            - name: MYSQL_ROOT_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  # Provides mysql-root-password. Created manually — see
+                  # SEAFILE-README.md. Not in Git. Same key is reused by
+                  # seafile-server's DB_ROOT_PASSWD env var (must match
+                  # exactly — this is the same requirement ggogel's own
+                  # compose file states: "This must equal
+                  # MYSQL_ROOT_PASSWORD").
+                  name: seafile-secrets
+                  key: mysql-root-password
+          volumeMounts:
+            - name: mariadb-data
+              mountPath: /var/lib/mysql
+          # Same first-boot InnoDB init timing risk as Photoprism's
+          # MariaDB — give it a real startupProbe window rather than
+          # trusting a short initialDelaySeconds on liveness.
+          startupProbe:
+            exec:
+              command: ["healthcheck.sh", "--connect"]
+            failureThreshold: 90
+            periodSeconds: 10
+          readinessProbe:
+            exec:
+              command: ["healthcheck.sh", "--connect"]
+            initialDelaySeconds: 20
+            periodSeconds: 60
+          livenessProbe:
+            exec:
+              command: ["healthcheck.sh", "--connect"]
+            initialDelaySeconds: 30
+            periodSeconds: 20
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              memory: 768Mi
+  volumeClaimTemplates:
+    - metadata:
+        name: mariadb-data
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        storageClassName: ceph-rbd
+        resources:
+          requests:
+            storage: 10Gi
+
+# --- Backup note ---
+# Protected by a nightly mysqldump CronJob (mariadb-backup-cronjob.yaml),
+# NOT by Velero's Kopia fs-backup directly against this volume — same
+# reasoning as Vaultwarden's Postgres: Kopia backs up files as they sit
+# on disk, not a transactionally-consistent snapshot, so a live MariaDB
+# data directory backed up that way risks a torn, non-restorable copy.
+# The mysqldump output itself (a plain SQL file on a different PVC) is
+# what Velero actually protects. True block-level Ceph CSI snapshotting
+# remains a planned follow-up for a faster recovery point, not yet built
+# — same open item as Vaultwarden's.
