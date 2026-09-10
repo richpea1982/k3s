@@ -12,6 +12,7 @@ spec:
       - 100.64.0.0/10
       - 10.42.0.0/16
       - 10.100.0.0/24
+      - 10.101.0.0/24
 ---
 # seafile-caddy (the piece we're replacing) does this exact strip before
 # forwarding to seafile-server — without it, seafile-server sees
