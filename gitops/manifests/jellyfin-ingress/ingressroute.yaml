@@ -1,0 +1,19 @@
+# manifests/jellyfin-ingress/ingressroute.yaml
+apiVersion: traefik.io/v1alpha1
+kind: IngressRoute
+metadata:
+  name: jellyfin
+  namespace: jellyfin
+spec:
+  entryPoints:
+    - websecure
+  routes:
+    - match: Host(`jellyfin.pearsalls.fr`)
+      kind: Rule
+      middlewares:
+        - name: jellyfin-admin-only
+      services:
+        - name: jellyfin
+          port: 8096
+  tls:
+    certResolver: cloudflare

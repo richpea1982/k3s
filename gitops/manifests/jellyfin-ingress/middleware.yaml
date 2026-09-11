@@ -1,0 +1,12 @@
+# manifests/jellyfin-ingress/middleware.yaml
+apiVersion: traefik.io/v1alpha1
+kind: Middleware
+metadata:
+  name: jellyfin-admin-only
+  namespace: jellyfin
+spec:
+  ipAllowList:
+    sourceRange:
+      - 10.0.0.0/16       # VLAN10 management
+      - 10.101.0.0/24     # wg1 — user WireGuard tunnel
+      - 10.100.0.0/24
