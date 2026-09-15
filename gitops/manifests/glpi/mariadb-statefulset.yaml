@@ -53,8 +53,8 @@ spec:
           # container mid-write is what corrupts it. startupProbe holds
           # liveness/readiness off until first boot genuinely succeeds
           # once (up to 300s here).
- 
-         startupProbe:
+
+          startupProbe:
             exec:
               command: ["healthcheck.sh", "--connect"]
             failureThreshold: 90
