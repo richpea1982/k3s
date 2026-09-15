@@ -47,7 +47,7 @@ spec:
 
                   echo "Waiting for mariadb to accept connections..."
                   i=0
-                  until mysqladmin ping -h mariadb -u"${MYSQL_USER}" -p"${MYSQL_PASSWORD}" --silent >/dev/null 2>&1; do
+                  until mariadb-admin ping -h mariadb -u"${MYSQL_USER}" -p"${MYSQL_PASSWORD}" --silent >/dev/null 2>&1; do
                     i=$((i+1))
                     if [ "$i" -ge 30 ]; then
                       echo "ERROR: mariadb never became ready after 60s"
@@ -66,7 +66,7 @@ spec:
                   # Same reasoning as Vaultwarden's pg_dump job: write to a
                   # plain file first so mysqldump's own exit code is what
                   # `set -e` actually checks, not gzip's.
-                  mysqldump -h mariadb -u"${MYSQL_USER}" -p"${MYSQL_PASSWORD}" \
+                  mariadb-dump -h mariadb -u"${MYSQL_USER}" -p"${MYSQL_PASSWORD}" \
                     --single-transaction --routines --triggers \
                     "${MYSQL_DATABASE}" > "${RAW}"
 
