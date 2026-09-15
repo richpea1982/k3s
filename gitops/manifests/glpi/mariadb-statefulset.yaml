@@ -52,7 +52,7 @@ spec:
           # container mid-write is what corrupts it. startupProbe holds
           # liveness/readiness off until first boot genuinely succeeds
           # once (up to 300s here).
-          subPath: mysql
+              subPath: mysql
  
          startupProbe:
             exec:
