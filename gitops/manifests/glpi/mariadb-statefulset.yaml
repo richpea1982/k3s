@@ -46,13 +46,13 @@ spec:
           volumeMounts:
             - name: mariadb-data
               mountPath: /var/lib/mysql
+              subPath: mysql
           # Same startupProbe reasoning as Photoprism's MariaDB: first-run
           # InnoDB tablespace creation can outlast a short liveness probe
           # window under a 100m CPU request, and a probe killing the
           # container mid-write is what corrupts it. startupProbe holds
           # liveness/readiness off until first boot genuinely succeeds
           # once (up to 300s here).
-              subPath: mysql
  
          startupProbe:
             exec:
