@@ -1,0 +1,28 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  validate:
+    name: Kubernetes manifests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install kubeconform
+        run: |
+          curl -sSL https://github.com/yannh/kubeconform/releases/latest/download/kubeconform-linux-amd64.tar.gz \
+            | tar xz -C /usr/local/bin
+      - run: pip install yamllint
+      - name: YAML lint
+        run: yamllint -d relaxed gitops/
+      - name: Validate Kubernetes manifests
+        run: >
+          kubeconform
+          -summary
+          -strict
+          -ignore-missing-schemas
+          gitops/manifests/ gitops/apps/
