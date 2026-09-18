@@ -18,7 +18,7 @@ jobs:
             | tar xz -C /usr/local/bin
       - run: pip install yamllint
       - name: YAML lint
-        run: yamllint -d relaxed gitops/
+        run: yamllint gitops/
       - name: Validate Kubernetes manifests
         run: >
           kubeconform

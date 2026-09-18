@@ -23,10 +23,10 @@ spec:
       sendResolved: true
       message: |
         <b>{{ if eq .Status "firing" }}🚨 ALERT FIRING{{ else }}✅ ALERT RESOLVED{{ end }}</b>
-        
+
         <b>Alert:</b> {{ .CommonLabels.alertname }}
         <b>Severity:</b> {{ .CommonLabels.severity }}
         <b>Namespace:</b> {{ .CommonLabels.namespace }}
-        
+
         <b>Summary:</b> {{ .CommonAnnotations.summary }}
         <b>Description:</b> {{ .CommonAnnotations.description }}

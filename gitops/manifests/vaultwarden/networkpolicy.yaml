@@ -43,8 +43,8 @@ spec:
     # Postgres, same namespace
     - to:
         - podSelector:
-              matchLabels:
-                app: postgres
+            matchLabels:
+              app: postgres
       ports:
         - protocol: TCP
           port: 5432
